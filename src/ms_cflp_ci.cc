@@ -8,27 +8,23 @@
 ** Autor: Marco Pérez Padilla
 ** Correo: alu0101469348@ull.edu.es
 ** Fecha: 31/03/2026
-
-** Archivo ms_cflp_ci.cc: Punto de entrada del programa
 **/
 
-#include <iostream>
 #include "help/help_functions.h"
 #include "menus/menu.h"
 #include "exceptions/exceptions.h"
+#include <iostream>
 
 int main(int argc, char* argv[]) {
   const int validation = ValidateArguments(argc, argv);
-  if (validation == 0) return 0;   // --help: salir limpiamente
+  if (validation == 0) return 0;   // --help
   if (validation != -1) return 1;  // argumentos incorrectos
 
   try {
-    Menu menu(argv[1]);
-    menu.run();
+    Menu::launch();
   } catch (const Exceptions& e) {
     std::cerr << "[Error] " << e.what() << "\n";
     return 1;
   }
-
   return 0;
 }

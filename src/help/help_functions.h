@@ -9,7 +9,7 @@
 ** Correo: alu0101469348@ull.edu.es
 ** Fecha: 31/03/2026
 
-** Archivo help_functions.h: Funciones auxiliares, Timer y presentación de resultados
+** Archivo help_functions.h: funciones de presentación de resultados
 **/
 
 #pragma once
@@ -31,62 +31,20 @@ void Usage();
  */
 int  ValidateArguments(int argc, char* argv[]);
 
-/// Comprueba que el nombre de fichero tenga extensión .dzn
-bool ValidateDataFile(const std::string& name);
-
-// ── Presentación de soluciones ────────────────────────────────────────────────
-
-/**
- * @brief Imprime una cabecera de tabla de resultados por stdout.
- */
+// ── Tabla de resultados ───────────────────────────────────────────────────────
 void printTableHeader();
-
-/**
- * @brief Imprime una fila de resultados para una solución.
- * @param label     Etiqueta descriptiva (algoritmo + instancia)
- * @param sol       Solución a presentar
- * @param inst      Instancia del problema
- * @param elapsed   Tiempo de CPU en segundos
- */
 void printSolutionRow(const std::string& label,
-                      const Solution&   sol,
-                      const Instance&   inst,
-                      double            elapsed);
+                      const Solution&    sol,
+                      const Instance&    inst,
+                      double             elapsedSeconds);
 
-/**
- * @brief Imprime un resumen detallado de una solución (bloque de texto).
- * @param label  Etiqueta descriptiva
- * @param sol    Solución a presentar
- * @param inst   Instancia del problema
- */
-void printSolution(const std::string& label,
-                   const Solution&    sol,
-                   const Instance&    inst);
-
-// ── Temporizador ─────────────────────────────────────────────────────────────
-
-/**
- * @brief Temporizador RAII de alta resolución basado en std::chrono.
- *
- * Uso típico:
- *   Timer t;
- *   // ... código a medir ...
- *   double secs = t.elapsedSeconds();
- */
-class Timer {
- public:
-  Timer() { reset(); }
-
-  /// Reinicia el contador
-  void reset() { start_ = std::chrono::steady_clock::now(); }
-
-  /// Segundos transcurridos desde la construcción o el último reset()
+// ── Temporizador simple ───────────────────────────────────────────────────────
+struct Timer {
+  std::chrono::high_resolution_clock::time_point t0 =
+      std::chrono::high_resolution_clock::now();
+  void reset() { t0 = std::chrono::high_resolution_clock::now(); }
   double elapsedSeconds() const {
     return std::chrono::duration<double>(
-               std::chrono::steady_clock::now() - start_)
-               .count();
+        std::chrono::high_resolution_clock::now() - t0).count();
   }
-
- private:
-  std::chrono::steady_clock::time_point start_;
 };

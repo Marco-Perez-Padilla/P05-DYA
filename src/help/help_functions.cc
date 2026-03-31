@@ -15,53 +15,42 @@
 #include "help_functions.h"
 #include <iostream>
 #include <iomanip>
-#include <regex>
 
-// ── Validación de argumentos ──────────────────────────────────────────────────
+static constexpr int COL_LABEL   = 26;
+static constexpr int COL_JOPEN   =  7;
+static constexpr int COL_COST    = 14;
+static constexpr int COL_INCOMP  =  9;
+static constexpr int COL_TIME    = 11;
+static constexpr int TABLE_WIDTH =
+    COL_LABEL + COL_JOPEN + COL_COST * 3 + COL_INCOMP + COL_TIME + 2;
+
 
 void Help() {
   std::cout
     << "MS-CFLP-CI — Constructive & Local Search Algorithms\n\n"
-    << "Uso: ./ms_cflp_ci <datafile.dzn>\n\n"
-    << "Argumentos:\n"
-    << "  <datafile.dzn>   Fichero de instancia en formato MiniZinc\n\n"
+    << "Uso: ./ms_cflp_ci\n\n"
     << "Opciones:\n"
     << "  --help, -h       Muestra este mensaje y termina\n";
 }
 
 void Usage() {
   std::cout
-    << "Uso: ./ms_cflp_ci <datafile.dzn>\n"
+    << "Uso: ./ms_cflp_ci\n"
     << "     ./ms_cflp_ci --help\n";
 }
 
-bool ValidateDataFile(const std::string& name) {
-  if (name.find('.') == std::string::npos) return false;
-  std::regex pattern(R"(.*\.dzn$)");
-  return std::regex_match(name, pattern);
-}
-
 int ValidateArguments(int argc, char* argv[]) {
+  if (argc == 1) return -1;  // sin argumentos, se continúa a los menús
   if (argc == 2) {
     const std::string arg = argv[1];
     if (arg == "--help" || arg == "-h") {
       Help();
       return 0;
     }
-    if (ValidateDataFile(arg)) return -1;
   }
   Usage();
   return 1;
 }
-
-// ── Presentación de soluciones ────────────────────────────────────────────────
-
-static constexpr int COL_LABEL     = 26;
-static constexpr int COL_JOPEN     =  7;
-static constexpr int COL_COST      = 14;
-static constexpr int COL_INCOMP    =  9;
-static constexpr int COL_TIME      = 11;
-static constexpr int TABLE_WIDTH   = COL_LABEL + COL_JOPEN + COL_COST*3 + COL_INCOMP + COL_TIME + 2;
 
 void printTableHeader() {
   std::cout << std::left
@@ -90,25 +79,4 @@ void printSolutionRow(const std::string& label,
             << std::setprecision(4)
             << std::setw(COL_TIME)   << elapsed
             << "\n";
-}
-
-void printSolution(const std::string& label,
-                   const Solution&    sol,
-                   const Instance&    inst) {
-  const std::string sep(50, '=');
-  std::cout << sep << "\n"
-            << "  " << label << "\n"
-            << sep << "\n"
-            << std::fixed << std::setprecision(2)
-            << "  Instalaciones abiertas : " << sol.openFacilitiesCount() << "\n"
-            << "  Coste fijo             : " << sol.getFixedCost()        << "\n"
-            << "  Coste de transporte    : " << sol.getTransportCost()    << "\n"
-            << "  Coste total            : " << sol.getTotalCost()        << "\n"
-            << "  Violaciones incompat.  : "
-            << sol.countIncompatibilityViolations(inst) << "\n"
-            << "  Demanda insatisfecha   : "
-            << sol.computeUnsatisfiedDemand(inst)       << "\n"
-            << "  Factible               : "
-            << (sol.isFeasible(inst) ? "SI" : "NO")     << "\n"
-            << sep << "\n\n";
 }
