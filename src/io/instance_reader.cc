@@ -45,7 +45,7 @@ static std::string extractValue(const std::string& content,
 }
 
 static std::string trim(const std::string& s) {
-  const std::string ws = " \t\n\r";
+  const std::string ws = " \trimmed\n\r";
   size_t a = s.find_first_not_of(ws);
   if (a == std::string::npos) return "";
   size_t b = s.find_last_not_of(ws);
@@ -66,8 +66,8 @@ static std::vector<double> parse1DArray(const std::string& val) {
   std::stringstream ss(inner);
   std::string token;
   while (std::getline(ss, token, ',')) {
-    const std::string t = trim(token);
-    if (!t.empty()) result.push_back(std::stod(t));
+    const std::string trimmed = trim(token);
+    if (!trimmed.empty()) result.push_back(std::stod(trimmed));
   }
   return result;
 }
@@ -82,11 +82,11 @@ static std::vector<std::vector<double>> parse2DArray(const std::string& val) {
   std::stringstream ss(inner);
   std::string rowStr;
   while (std::getline(ss, rowStr, '|')) {
-    const std::string t = trim(rowStr);
-    if (t.empty()) continue;
+    const std::string trimmed = trim(rowStr);
+    if (trimmed.empty()) continue;
 
     std::vector<double> row;
-    std::stringstream rs(t);
+    std::stringstream rs(trimmed);
     std::string token;
     while (std::getline(rs, token, ',')) {
       const std::string tk = trim(token);
@@ -114,26 +114,26 @@ Instance InstanceReader::read(const std::string& filepath) {
   const std::string content = readFile(filepath);
 
   Instance inst;
-  inst.m = parseScalar(extractValue(content, "Warehouses"));
-  inst.n = parseScalar(extractValue(content, "Stores"));
+  inst.warehouses = parseScalar(extractValue(content, "Warehouses"));
+  inst.stores = parseScalar(extractValue(content, "Stores"));
 
   inst.capacity   = parse1DArray(extractValue(content, "Capacity"));
-  inst.fixedCost  = parse1DArray(extractValue(content, "FixedCost"));
+  inst.fixed_cost  = parse1DArray(extractValue(content, "FixedCost"));
   inst.demand     = parse1DArray(extractValue(content, "Goods"));
-  inst.supplyCost = parse2DArray(extractValue(content, "SupplyCost"));
+  inst.supply_cost = parse2DArray(extractValue(content, "SupplyCost"));
 
-  inst.numIncompatibilities = parseScalar(extractValue(content, "Incompatibilities"));
-  inst.incompatiblePairs    = parsePairs(extractValue(content, "IncompatiblePairs"));
+  inst.num_incompatibilities = parseScalar(extractValue(content, "Incompatibilities"));
+  inst.incompatible_pairs    = parsePairs(extractValue(content, "IncompatiblePairs"));
 
   // ── Construir estructuras de consulta rápida ──────────────────────────
-  inst.incompNeighbors.assign(inst.n, {});
-  inst.isIncompat.assign(inst.n, std::vector<bool>(inst.n, false));
+  inst.incomp_neighbors.assign(inst.stores, {});
+  inst.is_incompat.assign(inst.stores, std::vector<bool>(inst.stores, false));
 
-  for (auto& [i1, i2] : inst.incompatiblePairs) {
-    inst.incompNeighbors[i1].push_back(i2);
-    inst.incompNeighbors[i2].push_back(i1);
-    inst.isIncompat[i1][i2] = true;
-    inst.isIncompat[i2][i1] = true;
+  for (auto& [i1, i2] : inst.incompatible_pairs) {
+    inst.incomp_neighbors[i1].push_back(i2);
+    inst.incomp_neighbors[i2].push_back(i1);
+    inst.is_incompat[i1][i2] = true;
+    inst.is_incompat[i2][i1] = true;
   }
 
   return inst;

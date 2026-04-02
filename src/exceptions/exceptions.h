@@ -40,8 +40,7 @@ class Exceptions : public std::exception {
  */
 class FileNotFoundException : public Exceptions {
  public:
-  explicit FileNotFoundException(const std::string& filename)
-    : Exceptions("Cannot open file: '" + filename + "'") {}
+  explicit FileNotFoundException(const std::string& filename) : Exceptions("Cannot open file: '" + filename + "'") {}
 };
 
 /**
@@ -49,8 +48,7 @@ class FileNotFoundException : public Exceptions {
  */
 class EmptyFileException : public Exceptions {
  public:
-  explicit EmptyFileException(const std::string& filename)
-    : Exceptions("File is empty or has no valid content: '" + filename + "'") {}
+  explicit EmptyFileException(const std::string& filename) : Exceptions("File is empty or has no valid content: '" + filename + "'") {}
 };
 
 /**
@@ -58,8 +56,7 @@ class EmptyFileException : public Exceptions {
  */
 class InfeasibleSolutionException : public Exceptions {
  public:
-  explicit InfeasibleSolutionException(const std::string& reason)
-    : Exceptions("Solution is infeasible: " + reason) {}
+  explicit InfeasibleSolutionException(const std::string& reason) : Exceptions("Solution is infeasible: " + reason) {}
 };
 
 /**
@@ -67,8 +64,7 @@ class InfeasibleSolutionException : public Exceptions {
  */
 class InvalidDataException : public Exceptions {
  public:
-  explicit InvalidDataException(const std::string& reason)
-    : Exceptions("Invalid data: " + reason) {}
+  explicit InvalidDataException(const std::string& reason) : Exceptions("Invalid data: " + reason) {}
 };
 
 #endif

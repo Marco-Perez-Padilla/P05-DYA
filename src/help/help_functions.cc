@@ -25,6 +25,9 @@ static constexpr int TABLE_WIDTH =
     COL_LABEL + COL_JOPEN + COL_COST * 3 + COL_INCOMP + COL_TIME + 2;
 
 
+/**
+ * @brief Shows the help message with usage instructions and options.
+ */
 void Help() {
   std::cout
     << "MS-CFLP-CI — Constructive & Local Search Algorithms\n\n"
@@ -33,12 +36,23 @@ void Help() {
     << "  --help, -h       Muestra este mensaje y termina\n";
 }
 
+/**
+ * @brief Shows usage instructions when invalid arguments are provided.
+ */
 void Usage() {
   std::cout
     << "Uso: ./ms_cflp_ci\n"
     << "     ./ms_cflp_ci --help\n";
 }
 
+/**
+ * @brief Validates command-line arguments.
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return  0 if --help was requested (terminate successfully)
+ *         -1 if arguments are correct (continue to menus)
+ *          1 if arguments are incorrect (terminate with error)
+ */
 int ValidateArguments(int argc, char* argv[]) {
   if (argc == 1) return -1;  // sin argumentos, se continúa a los menús
   if (argc == 2) {
@@ -52,6 +66,9 @@ int ValidateArguments(int argc, char* argv[]) {
   return 1;
 }
 
+/**
+ * @brief Prints the header of the results table.
+ */
 void printTableHeader() {
   std::cout << std::left
             << std::setw(COL_LABEL)  << "Algoritmo/Instancia"
@@ -65,17 +82,21 @@ void printTableHeader() {
             << std::string(TABLE_WIDTH, '-') << "\n";
 }
 
-void printSolutionRow(const std::string& label,
-                      const Solution&    sol,
-                      const Instance&    inst,
-                      double             elapsed) {
+/**
+ * @brief Prints a row in the results table with the solution details.
+ * @param label A string label describing the algorithm and instance.
+ * @param solution The Solution object containing the results to display.
+ * @param inst The Instance object providing context for incompatibility violations.
+ * @param elapsed The time taken to compute the solution, in seconds.
+ */
+void printSolutionRow(const std::string& label, const Solution& solution, const Instance& inst, double elapsed) {
   std::cout << std::left  << std::setw(COL_LABEL)  << label
-            << std::right << std::setw(COL_JOPEN)  << sol.openFacilitiesCount()
+            << std::right << std::setw(COL_JOPEN)  << solution.openFacilitiesCount()
             << std::fixed << std::setprecision(2)
-            << std::setw(COL_COST)   << sol.getFixedCost()
-            << std::setw(COL_COST)   << sol.getTransportCost()
-            << std::setw(COL_COST)   << sol.getTotalCost()
-            << std::setw(COL_INCOMP) << sol.countIncompatibilityViolations(inst)
+            << std::setw(COL_COST)   << solution.getFixedCost()
+            << std::setw(COL_COST)   << solution.getTransportCost()
+            << std::setw(COL_COST)   << solution.getTotalCost()
+            << std::setw(COL_INCOMP) << solution.countIncompatibilityViolations(inst)
             << std::setprecision(4)
             << std::setw(COL_TIME)   << elapsed
             << "\n";

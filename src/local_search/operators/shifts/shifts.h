@@ -15,6 +15,6 @@
  */
 class Shifts : public LocalSearch {
 public:
-    bool improve(Solution& sol, const Instance& inst) override;
+    bool improve(Solution& solution, const Instance& inst) override;
     std::string name() const override { return "ShiftLS"; }
 };

@@ -1,30 +1,37 @@
-#pragma once
+/**
+** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo instance.h: Definición de la estructura Instance
+**/
+
+#ifndef INSTANCE_H
+#define INSTANCE_H
+
 #include <vector>
 #include <utility>
 
 /**
  * @brief Datos estáticos de una instancia MS-CFLP-CI.
- *
- * Índices internos en base 0. El lector del fichero .dzn
- * convierte los pares incompatibles de base 1 a base 0.
  */
 struct Instance {
-    int m = 0;  ///< Número de instalaciones (Warehouses)
-    int n = 0;  ///< Número de clientes (Stores)
-
-    std::vector<double> capacity;   ///< s[j]: capacidad de la instalación j
-    std::vector<double> fixedCost;  ///< f[j]: coste fijo de apertura de j
-    std::vector<double> demand;     ///< d[i]: demanda del cliente i
-
-    /// supplyCost[i][j]: coste unitario de transporte de j a i
-    std::vector<std::vector<double>> supplyCost;
-
-    int numIncompatibilities = 0;
-    std::vector<std::pair<int,int>> incompatiblePairs; ///< pares incompatibles, base 0
-
-    /// incompNeighbors[i]: lista de clientes incompatibles con i
-    std::vector<std::vector<int>> incompNeighbors;
-
-    /// isIncompat[i1][i2]: consulta O(1) de incompatibilidad
-    std::vector<std::vector<bool>> isIncompat;
+  int warehouses = 0;  
+  int stores = 0;
+  std::vector<double> capacity;  
+  std::vector<double> fixed_cost;  
+  std::vector<double> demand; 
+  std::vector<std::vector<double>> supply_cost;
+  int num_incompatibilities = 0;
+  std::vector<std::pair<int,int>> incompatible_pairs;
+  std::vector<std::vector<int>> incomp_neighbors;
+  std::vector<std::vector<bool>> is_incompat;
 };
+
+#endif

@@ -1,61 +1,81 @@
+/**
+** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo greedy_constructive.cc: Implementación: Clase GreedyConstructive para el MS-CFLP-CI
+**/
+
 #include "greedy_constructive.h"
 #include <numeric>
 #include <algorithm>
 
+/**
+ * @brief Constructive algorithm for MS-CFLP-CI 
+ * @param inst The instance of the problem.
+ * @return The constructed solution.
+ *
+ */
 Solution GreedyConstructive::build(const Instance& inst) {
-    Solution sol = Solution::createEmpty(inst);
-    const int m = inst.m, n = inst.n;
+  Solution solution = Solution::createEmpty(inst);
+  const int warehouses = inst.warehouses, stores = inst.stores;
 
-    // ── FASE 1: Selección de instalaciones ───────────────────────────────
-    // Ordenar índices de instalaciones por coste fijo ascendente
-    std::vector<int> order(m);
-    std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(),
-              [&](int a, int b){ return inst.fixedCost[a] < inst.fixedCost[b]; });
+  // Warehouses selection: open facilities in ascending order of fixed cost until demand is covered
+  std::vector<int> order(warehouses);
+  std::iota(order.begin(), order.end(), 0);
+  std::sort(order.begin(), order.end(),
+            [&](int a, int b){ return inst.fixed_cost[a] < inst.fixed_cost[b]; });
 
-    double totalDemand = 0.0;
-    for (double d : inst.demand) totalDemand += d;
+  double total_demand = 0.0;
+  for (double dmd : inst.demand) {
+    total_demand += dmd;
+  }
 
-    double accCap = 0.0;
-    int idx = 0;
+  double acc_cap = 0.0;
+  int index = 0;
 
-    // Abrir instalaciones hasta cubrir la demanda total
-    while (idx < m && accCap < totalDemand) {
-        const int j = order[idx++];
-        sol.openFacility(j, inst);
-        accCap += inst.capacity[j];
+  // Open warehouses until demand is covered
+  while (index < warehouses && acc_cap < total_demand) {
+    const int j = order[index++];
+    solution.openFacility(j, inst);
+    acc_cap += inst.capacity[j];
+  }
+
+  // Add extra facilities as slack for incompatibilities
+  for (int extra = 0; extra < holgura_ && index < warehouses; ++extra, ++index) {
+    solution.openFacility(order[index], inst);
+  }
+
+  // Clients assignation: for each client, assign to open facilities in ascending order of transport cost, checking capacity and incompatibilities.
+  for (int i = 0; i < stores; ++i) {
+    std::vector<int> fac_order;
+    fac_order.reserve(warehouses);
+    for (int j = 0; j < warehouses; ++j) {
+        if (solution.open[j]) fac_order.push_back(j);
     }
+    std::sort(fac_order.begin(), fac_order.end(),
+              [&](int a, int b){ return inst.supply_cost[i][a] < inst.supply_cost[i][b]; });
 
-    // Añadir k instalaciones extra por holgura de incompatibilidad
-    for (int extra = 0; extra < k_ && idx < m; ++extra, ++idx)
-        sol.openFacility(order[idx], inst);
+    double remaining = inst.demand[i];
+    for (int j : fac_order) {
+      if (remaining < EPS) break;
 
-    // ── FASE 2: Asignación de clientes ───────────────────────────────────
-    for (int i = 0; i < n; ++i) {
-        // Ordenar instalaciones abiertas por coste de transporte para el cliente i
-        std::vector<int> facOrder;
-        facOrder.reserve(m);
-        for (int j = 0; j < m; ++j)
-            if (sol.open[j]) facOrder.push_back(j);
-        std::sort(facOrder.begin(), facOrder.end(),
-                  [&](int a, int b){ return inst.supplyCost[i][a] < inst.supplyCost[i][b]; });
+      // Verify incompatibilities: if facility j is incompatible with any already assigned facility for client i, skip it
+      if (solution.incomp_count[i][j] > 0) continue;
 
-        double remaining = inst.demand[i];
-        for (int j : facOrder) {
-            if (remaining < EPS) break;
+      // Verify residual capacity: if facility j has no residual capacity, skip it
+      if (solution.residual_cap[j] < EPS) continue;
 
-            // Verificar compatibilidad: ningún incompatible de i está en j
-            if (sol.incompCount[i][j] > 0) continue;
-
-            // Verificar capacidad residual
-            if (sol.residualCap[j] < EPS) continue;
-
-            const double q = std::min(remaining, sol.residualCap[j]);
-            sol.assign(i, j, q, inst);
-            remaining -= q;
-        }
-        // Si remaining > EPS, la demanda no se satisfizo (solución infactible)
+      const double q = std::min(remaining, solution.residual_cap[j]);
+      solution.assign(i, j, q, inst);
+      remaining -= q;
     }
-
-    return sol;
+  }
+  return solution;
 }

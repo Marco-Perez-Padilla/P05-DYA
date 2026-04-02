@@ -16,121 +16,166 @@
 #include <algorithm>
 #include <numeric>
 
-// ── Fábrica ───────────────────────────────────────────────────────────────────
-
+/**
+ * @brief Creates an empty solution with all data structures initialized but no facilities open and no demand assigned.
+ * @param inst The instance for which to create the solution (used to initialize sizes and capacities).
+ * @return A new Solution object representing an empty solution.
+ */
 Solution Solution::createEmpty(const Instance& inst) {
-  Solution sol;
-  const int m = inst.m, n = inst.n;
+  Solution solution;
+  const int warehouses = inst.warehouses, stores = inst.stores;
 
-  sol.open.assign(m, false);
-  sol.x.assign(n, std::vector<double>(m, 0.0));
-  sol.w.assign(n, std::vector<bool>(m, false));
-  sol.residualCap.assign(m, 0.0);
-  sol.clientsOf.assign(m, {});
-  sol.facilitiesOf.assign(n, {});
-  sol.incompCount.assign(n, std::vector<int>(m, 0));
-  sol.fixedCost_     = 0.0;
-  sol.transportCost_ = 0.0;
-  sol.totalCost_     = 0.0;
-  return sol;
+  solution.open.assign(warehouses, false);
+  solution.demand_fraction.assign(stores, std::vector<double>(warehouses, 0.0));
+  solution.partial_attend.assign(stores, std::vector<bool>(warehouses, false));
+  solution.residual_cap.assign(warehouses, 0.0);
+  solution.clients_of.assign(warehouses, {});
+  solution.facilities_of.assign(stores, {});
+  solution.incomp_count.assign(stores, std::vector<int>(warehouses, 0));
+  solution.fixed_cost_     = 0.0;
+  solution.trasnport_cost_ = 0.0;
+  solution.total_cost_     = 0.0;
+  return solution;
 }
 
-// ── Operaciones sobre instalaciones ──────────────────────────────────────────
-
+/**
+ * @brief Opens facility j if it is not already open, updating costs and residual capacity.
+ * @param j The index of the facility to open.
+ * @param inst The instance providing the fixed cost and capacity of the facility.
+ */
 void Solution::openFacility(int j, const Instance& inst) {
   if (!open[j]) {
     open[j]         = true;
-    residualCap[j]  = inst.capacity[j];
-    fixedCost_     += inst.fixedCost[j];
-    totalCost_      = fixedCost_ + transportCost_;
+    residual_cap[j]  = inst.capacity[j];
+    fixed_cost_     += inst.fixed_cost[j];
+    total_cost_      = fixed_cost_ + trasnport_cost_;
   }
 }
 
+/**
+ * @brief Closes facility j if it is open and has no clients assigned, updating costs and residual capacity.
+ * @param j The index of the facility to close.
+ * @param inst The instance providing the fixed cost of the facility.
+ */
 void Solution::closeFacility(int j, const Instance& inst) {
-  if (open[j] && clientsOf[j].empty()) {
+  if (open[j] && clients_of[j].empty()) {
     open[j]         = false;
-    residualCap[j]  = 0.0;
-    fixedCost_     -= inst.fixedCost[j];
-    totalCost_      = fixedCost_ + transportCost_;
+    residual_cap[j]  = 0.0;
+    fixed_cost_     -= inst.fixed_cost[j];
+    total_cost_      = fixed_cost_ + trasnport_cost_;
   }
 }
 
-// ── Operaciones de asignación ─────────────────────────────────────────────────
-
+/**
+ * @brief Assigns a certain amount of demand from client i to facility j, updating all relevant data structures and costs.
+ * If the facility is not open, it will be opened automatically.
+ * @param i The index of the client.
+ * @param j The index of the facility.
+ * @param amount The amount of demand to assign (must be positive and not exceed the client's demand or the facility's residual capacity).
+ * @param inst The instance providing demand, supply cost,
+ */
 void Solution::assign(int i, int j, double amount, const Instance& inst) {
   if (!open[j]) openFacility(j, inst);
 
-  const bool wasServed = w[i][j];
-  x[i][j]          += amount / inst.demand[i];
-  residualCap[j]   -= amount;
-  transportCost_   += inst.supplyCost[i][j] * amount;
-  totalCost_        = fixedCost_ + transportCost_;
+  const bool wasServed = partial_attend[i][j];
+  demand_fraction[i][j]          += amount / inst.demand[i];
+  residual_cap[j]   -= amount;
+  trasnport_cost_   += inst.supply_cost[i][j] * amount;
+  total_cost_        = fixed_cost_ + trasnport_cost_;
 
   if (!wasServed) {
-    // Primera asignación de i a j: registrar en estructuras auxiliares
-    w[i][j] = true;
-    clientsOf[j].push_back(i);
-    facilitiesOf[i].push_back(j);
-    for (int ip : inst.incompNeighbors[i])
-      incompCount[ip][j]++;
+    partial_attend[i][j] = true;
+    clients_of[j].push_back(i);
+    facilities_of[i].push_back(j);
+    for (int ip : inst.incomp_neighbors[i])
+      incomp_count[ip][j]++;
   }
 }
 
+/**
+ * @brief Removes a certain amount of demand from the assignment of client i to facility j, updating all relevant data structures and costs.
+ * If the resulting demand fraction for i at j drops to zero, i is removed from all auxiliary structures related to j.
+ * @param i The index of the client.
+ * @param j The index of the facility.
+ * @param amount The amount of demand to remove (must be positive and not exceed the currently assigned amount).
+ * @param inst The instance providing demand, supply cost, and incompatibility information.
+ */
 void Solution::removeAssignment(int i, int j, double amount, const Instance& inst) {
-  x[i][j]         -= amount / inst.demand[i];
-  residualCap[j]  += amount;
-  transportCost_  -= inst.supplyCost[i][j] * amount;
-  totalCost_       = fixedCost_ + transportCost_;
+  demand_fraction[i][j]         -= amount / inst.demand[i];
+  residual_cap[j]  += amount;
+  trasnport_cost_  -= inst.supply_cost[i][j] * amount;
+  total_cost_       = fixed_cost_ + trasnport_cost_;
 
-  if (x[i][j] < EPS) {
+  if (demand_fraction[i][j] < EPS) {
     // i ya no está en j: limpiar estructuras auxiliares
-    x[i][j] = 0.0;
-    w[i][j] = false;
+    demand_fraction[i][j] = 0.0;
+    partial_attend[i][j] = false;
 
-    auto& co = clientsOf[j];
+    auto& co = clients_of[j];
     co.erase(std::remove(co.begin(), co.end(), i), co.end());
 
-    auto& fo = facilitiesOf[i];
+    auto& fo = facilities_of[i];
     fo.erase(std::remove(fo.begin(), fo.end(), j), fo.end());
 
-    for (int ip : inst.incompNeighbors[i])
-      incompCount[ip][j]--;
+    for (int ip : inst.incomp_neighbors[i])
+      incomp_count[ip][j]--;
   }
 }
 
-// ── Validación ────────────────────────────────────────────────────────────────
-
+/**
+ * @brief Checks if the solution is feasible by verifying that there are no incompatibility violations and that all demand is satisfied within a tolerance.
+ * @param inst The instance providing incompatibility and demand information.
+ * @return true if the solution is feasible, false otherwise.
+ */
 bool Solution::isFeasible(const Instance& inst) const {
   return countIncompatibilityViolations(inst) == 0
       && computeUnsatisfiedDemand(inst) < EPS;
 }
 
+/**
+ * @brief Counts the number of incompatibility violations in the solution by checking all pairs of incompatible clients and their assigned facilities.
+ * @param inst The instance providing the list of incompatible pairs and their assigned facilities.
+ * @return The total number of incompatibility violations in the solution.
+ */
 int Solution::countIncompatibilityViolations(const Instance& inst) const {
   int violations = 0;
-  for (auto& [i1, i2] : inst.incompatiblePairs)
-    for (int j = 0; j < inst.m; ++j)
-      if (w[i1][j] && w[i2][j]) ++violations;
+  for (auto& [i1, i2] : inst.incompatible_pairs)
+    for (int j = 0; j < inst.warehouses; ++j)
+      if (partial_attend[i1][j] && partial_attend[i2][j]) ++violations;
   return violations;
 }
 
+/**
+ * @brief Computes the total unsatisfied demand in the solution by summing the unmet demand for each client based on their assigned demand fractions.
+ * @param inst The instance providing demand information.
+ * @return The total amount of unsatisfied demand in the solution.
+ */
 double Solution::computeUnsatisfiedDemand(const Instance& inst) const {
   double total = 0.0;
-  for (int i = 0; i < inst.n; ++i) {
+  for (int i = 0; i < inst.stores; ++i) {
     double fraction = 0.0;
-    for (int j = 0; j < inst.m; ++j) fraction += x[i][j];
+    for (int j = 0; j < inst.warehouses; ++j) fraction += demand_fraction[i][j];
     const double unsatisfied = 1.0 - fraction;
     if (unsatisfied > EPS) total += unsatisfied * inst.demand[i];
   }
   return total;
 }
 
+/**
+ * @brief Counts the number of open facilities in the solution by summing the boolean values in the open vector.
+ * @return The total number of open facilities in the solution.
+ */
 int Solution::openFacilitiesCount() const {
   return std::count(open.begin(), open.end(), true);
 }
 
-// ── Comprobación de factibilidad tras búsqueda local ─────────────────────────
-
-#ifndef NDEBUG
+/**
+ * @brief Checks the feasibility of the solution after local search by verifying that there are no incompatibility violations and that all demand is satisfied within a tolerance.
+ * If the solution is infeasible, an InfeasibleSolutionException is thrown with details about the violations and unsatisfied demand. 
+ * @param inst The instance providing incompatibility and demand information.
+ * @param context An optional string providing context about the local search operation that was performed, included in the exception message if the solution is infeasible.
+ * @throws InfeasibleSolutionException if the solution is infeasible, with details about the number of incompatibility violations and
+ */
 void Solution::checkFeasibilityAfterLS(const Instance& inst,
                                         const std::string& context) const {
   if (!isFeasible(inst)) {
@@ -143,4 +188,3 @@ void Solution::checkFeasibilityAfterLS(const Instance& inst,
         ", unsatisfied demand="       + std::to_string(unsatisfied));
   }
 }
-#endif

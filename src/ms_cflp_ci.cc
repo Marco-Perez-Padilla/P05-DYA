@@ -8,6 +8,14 @@
 ** Autor: Marco Pérez Padilla
 ** Correo: alu0101469348@ull.edu.es
 ** Fecha: 31/03/2026
+
+** Archivo ms_cflp_ci.cc: Punto de entrada del programa
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
 **/
 
 #include "help/help_functions.h"
@@ -17,13 +25,13 @@
 
 int main(int argc, char* argv[]) {
   const int validation = ValidateArguments(argc, argv);
-  if (validation == 0) return 0;   // --help
-  if (validation != -1) return 1;  // argumentos incorrectos
+  if (validation == 0) return 0;  
+  if (validation != -1) return 1; 
 
   try {
     Menu::launch();
-  } catch (const Exceptions& e) {
-    std::cerr << "[Error] " << e.what() << "\n";
+  } catch (const Exceptions& error) {
+    std::cerr << "[Error] " << error.what() << "\n";
     return 1;
   }
   return 0;

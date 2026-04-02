@@ -1,27 +1,39 @@
-#pragma once
+/**
+** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo swap_facilities.h: Operador de búsqueda local para intercambiar instalaciones
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**/
+
+#ifndef SWAP_FACILITIES_H
+#define SWAP_FACILITIES_H
+
 #include "../../local_search.h"
 
 /**
  * @brief Búsqueda local voraz basada en Swap-Instalaciones(jopen, jclosed).
  *
- * Para cada par (jclose ∈ abiertas, jnew ∈ cerradas), simula cerrar
+ * Para cada par (jclose abiertas, jnew cerradas), simula cerrar
  * jclose y abrir jnew, redistribuyendo los clientes de jclose a la
  * instalación abierta (incluida jnew) de menor coste compatible.
- *
- * También evalúa el cierre puro de una instalación (sin abrir otra)
- * cuando sus clientes pueden redistribuirse hacia otras instalaciones
- * ya abiertas.
- *
- * Estrategia: primera mejora (first improvement) para reducir la
- * complejidad de almacenar el plan de redistribución.
- *
- * PROPIEDAD CLAVE: dado que la solución es factible, todos los clientes
- * de jclose son mutuamente compatibles. Por tanto, al moverlos a una
- * instalación destino solo hace falta verificar la compatibilidad con
- * los clientes ya existentes en dicho destino (incompCount[i][j] == 0).
  */
 class SwapFacilities : public LocalSearch {
-public:
-    bool improve(Solution& sol, const Instance& inst) override;
-    std::string name() const override { return "SwapFacilitiesLS"; }
+ public:
+  bool improve(Solution& solution, const Instance& inst) override;
+  std::string name() const override { return "SwapFacilitiesLS"; }
 };
+
+#endif

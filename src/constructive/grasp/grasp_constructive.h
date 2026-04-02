@@ -1,4 +1,19 @@
-#pragma once
+/** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo grasp_constructive.h: Clase GRASPConstructive para el MS-CFLP-CI
+**/
+
+#ifndef GRASP_CONSTRUCTIVE_H
+#define GRASP_CONSTRUCTIVE_H
+
 #include "../constructive.h"
 #include <random>
 #include <chrono>
@@ -25,29 +40,18 @@
  *   y se elige aleatoriamente.
  */
 class GRASPConstructive : public Constructive {
-public:
-  explicit GRASPConstructive(int alpha = 3)
-      : alpha_(alpha), rng_(timeSeed()) {}
-
-  Solution build(const Instance& inst) override;
-
-  int alpha() const { return alpha_; }
-
-  /// Permite fijar una semilla concreta (útil para tests reproducibles).
-  void setSeed(unsigned seed) { rng_.seed(seed); }
-
-  /// Resiembra con el tiempo actual (comportamiento por defecto entre iteraciones).
-  void reseed() { rng_.seed(timeSeed()); }
-
-private:
-  int          alpha_;
+ private:
+  int alpha_;
   std::mt19937 rng_;
-  int          k_ = 5; ///< Holgura de instalaciones extra
+  int holgura_ = 5;
+  static unsigned timeSeed() {return static_cast<unsigned>(std::chrono::high_resolution_clock::now().time_since_epoch().count());}
 
-  /// Genera una semilla a partir del reloj de alta resolución.
-  static unsigned timeSeed() {
-    return static_cast<unsigned>(
-        std::chrono::high_resolution_clock::now()
-            .time_since_epoch().count());
-  }
+ public:
+  explicit GRASPConstructive(int alpha = 3) : alpha_(alpha), rng_(timeSeed()) {}
+  Solution build(const Instance& inst) override;
+  int alpha() const { return alpha_; }
+  void setSeed(unsigned seed) { rng_.seed(seed); }
+  void reseed() { rng_.seed(timeSeed()); }
 };
+
+#endif

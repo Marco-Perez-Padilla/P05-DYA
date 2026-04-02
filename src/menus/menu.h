@@ -12,7 +12,9 @@
 ** Archivo menu.h: Clase Menu
 **/
 
-#pragma once
+#ifndef MENU_H
+#define MENU_H
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -24,53 +26,39 @@
  * @brief Configuración de ejecución elegida por el usuario en los menús.
  */
 struct RunConfig {
-  bool runGreedy  = true;
-  bool runGRASP   = true;
-  int  graspAlpha = 3;
-  int  graspIters = 100;
-  std::vector<int> instanceIndices;  ///< índices base-0 de las instancias a ejecutar
+  bool run_greedy  = true;
+  bool run_GRASP   = true;
+  int  grasp_alpha = 3;
+  int  grasp_iters = 100;
+  std::vector<int> instance_indexes;  
 };
 
 /**
  * @brief Orquesta los menús interactivos, la carga de instancias y la
  * ejecución de algoritmos con medición de tiempos.
- *
- * Uso externo: Menu::launch() desde main(), sin argumentos.
  */
 class Menu {
  public:
-  /// Punto de entrada: muestra los menús y ejecuta los algoritmos.
   static void launch();
 
  private:
-  // ── Constructor (uso interno) ─────────────────────────────────────────────
-  Menu(const std::string& instancePath, const RunConfig& cfg);
-
-  /// Ejecuta los algoritmos configurados sobre la instancia cargada.
-  void run();
-
-  // ── Menús interactivos ────────────────────────────────────────────────────
-  static RunConfig askAlgorithmMenu();
-  static void      askInstanceMenu(RunConfig& cfg,
-                                   const std::vector<std::string>& paths);
-
-  // ── Utilidades de instancias ──────────────────────────────────────────────
-  static std::string              askDataDir();
-  static std::vector<std::string> findInstances(const std::string& dir);
-  static void                     listInstances(const std::vector<std::string>& paths);
-  static std::vector<int>         parseSelection(const std::string& input, int total);
-
-  // ── Datos de instancia y configuración ───────────────────────────────────
-  std::string instancePath_;
-  std::string instanceName_;
+  std::string instance_path_;
+  std::string instance_name_;
   Instance    inst_;
-  RunConfig   cfg_;
+  RunConfig   config_;
+  std::vector<std::shared_ptr<LocalSearch>> local_seach_ops_;
 
-  // ── Búsquedas locales compartidas ────────────────────────────────────────
-  std::vector<std::shared_ptr<LocalSearch>> localSearchOps_;
-  void applyLocalSearches(Solution& sol) const;
-
-  // ── Algoritmos ────────────────────────────────────────────────────────────
+  Menu(const std::string& instance_path, const RunConfig& config);
+  void run();
+  static RunConfig askAlgorithmMenu();
+  static void askInstanceMenu(RunConfig& config, const std::vector<std::string>& paths);
+  static std::string askDataDir();
+  static std::vector<std::string> findInstances(const std::string& dir);
+  static void listInstances(const std::vector<std::string>& paths);
+  static std::vector<int> parseSelection(const std::string& input, int total);
+  void applyLocalSearches(Solution& solution) const;
   void runGreedyAlgo();
   void runGRASPAlgo();
 };
+
+#endif

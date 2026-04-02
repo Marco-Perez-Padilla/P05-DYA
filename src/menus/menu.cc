@@ -29,63 +29,51 @@
 #include <sstream>
 #include <limits>
 
-namespace fs = std::filesystem;
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Punto de entrada
-// ══════════════════════════════════════════════════════════════════════════════
-
+/**
+ * @brief Launches the interactive menu for selecting data directory, algorithms, and instances, and then executes the selected algorithms on the chosen instances with timing and result reporting.
+ */
 void Menu::launch() {
-  // 1. Preguntar directorio de instancias
   const std::string dir = askDataDir();
   const auto paths = findInstances(dir);
-  if (paths.empty())
+  if (paths.empty()) {
     throw FileNotFoundException(dir + " (ningún .dzn encontrado)");
+  }
 
-  // 2. Menú de algoritmos
-  RunConfig cfg = askAlgorithmMenu();
+  RunConfig config = askAlgorithmMenu();
+  askInstanceMenu(config, paths);
 
-  // 3. Menú de instancias
-  askInstanceMenu(cfg, paths);
-
-  // 4. Ejecutar
-  std::cout << "\n=== EJECUTANDO " << cfg.instanceIndices.size()
-            << " INSTANCIA(S) ===\n\n";
-
-  for (const int idx : cfg.instanceIndices) {
+  std::cout << "\n=== EJECUTANDO " << config.instance_indexes.size() << " INSTANCIA(S) ===\n\n";
+  for (const int index : config.instance_indexes) {
     std::cout << std::string(60, '-') << "\n";
     try {
-      Menu menu(paths[idx], cfg);
+      Menu menu(paths[index], config);
       menu.run();
-    } catch (const Exceptions& e) {
-      std::cerr << "[Error en "
-                << fs::path(paths[idx]).filename().string()
-                << "] " << e.what() << "\n";
+    } catch (const Exceptions& error) {
+      std::cerr << "[Error en " << std::filesystem::path(paths[index]).filename().string() << "] " << error.what() << "\n";
     }
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Menú 0 — directorio de datos
-// ══════════════════════════════════════════════════════════════════════════════
-
+/**
+ * @brief Asks the user for the data directory containing instance files, with a default option. Trims whitespace and validates input.
+ * @return The path to the data directory as a string.
+ */
 std::string Menu::askDataDir() {
   const std::string defaultDir = "data/input/Public";
   std::cout << "\nDirectorio de instancias [" << defaultDir << "]: ";
   std::string line;
   std::getline(std::cin, line);
-  // Eliminar espacios extremos
-  line.erase(0, line.find_first_not_of(" \t"));
-  line.erase(line.find_last_not_of(" \t") + 1);
+  line.erase(0, line.find_first_not_of(" \time"));
+  line.erase(line.find_last_not_of(" \time") + 1);
   return line.empty() ? defaultDir : line;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Menú 1 — selección de algoritmos y parámetros GRASP
-// ══════════════════════════════════════════════════════════════════════════════
-
+/**
+ * @brief Displays a menu for selecting which algorithms to run (Greedy, GRASP, or both) and allows configuring GRASP parameters if selected.
+ * @return A RunConfig struct containing the user's selections for algorithms and parameters.
+ */
 RunConfig Menu::askAlgorithmMenu() {
-  RunConfig cfg;
+  RunConfig config;
   std::string line;
   int op = 0;
   while (op < 1 || op > 3) {
@@ -97,7 +85,9 @@ RunConfig Menu::askAlgorithmMenu() {
 
     int op = 3;
     if (std::getline(std::cin, line) && !line.empty())
-      try { op = std::stoi(line); } catch (...) {
+      try { 
+        op = std::stoi(line); 
+      } catch (...) {
         op = 0;
       }
 
@@ -105,27 +95,34 @@ RunConfig Menu::askAlgorithmMenu() {
       std::cout << "  Opción no válida. Introduce 1, 2 o 3.\n";
     }
   }
-  cfg.runGreedy = (op == 1 || op == 3);
-  cfg.runGRASP  = (op == 2 || op == 3);
+  config.run_greedy = (op == 1 || op == 3);
+  config.run_GRASP  = (op == 2 || op == 3);
 
-  if (cfg.runGRASP) {
+  if (config.run_GRASP) {
     std::cout << "\n  Tamaño LRC alpha [3]: ";
-    if (std::getline(std::cin, line) && !line.empty())
-      try { cfg.graspAlpha = std::stoi(line); } catch (...) {}
+    if (std::getline(std::cin, line) && !line.empty()) {
+      try { 
+        config.grasp_alpha = std::stoi(line); 
+      } catch (...) {}
+    }
 
     std::cout << "  Iteraciones GRASP [100]: ";
-    if (std::getline(std::cin, line) && !line.empty())
-      try { cfg.graspIters = std::stoi(line); } catch (...) {}
+    if (std::getline(std::cin, line) && !line.empty()) {
+      try { 
+        config.grasp_iters = std::stoi(line); 
+      } catch (...) {}
+    }
   }
 
-  return cfg;
+  return config;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Menú 2 — selección de instancias
-// ══════════════════════════════════════════════════════════════════════════════
-
-void Menu::askInstanceMenu(RunConfig& cfg, const std::vector<std::string>& paths) {
+/**
+ * @brief Displays a menu for selecting which instances to run on, allowing selection by index, range, or all. Validates input and updates the RunConfig with the selected instance indexes.
+ * @param config The RunConfig struct to update with the selected instance indexes.
+ * @param paths The list of available instance file paths to select from.
+ */
+void Menu::askInstanceMenu(RunConfig& config, const std::vector<std::string>& paths) {
   listInstances(paths);
 
   std::cout << "\n=== MENÚ DE INSTANCIAS ===\n"
@@ -134,125 +131,139 @@ void Menu::askInstanceMenu(RunConfig& cfg, const std::vector<std::string>& paths
 
   std::string sel = "all";
   std::string line;
-  if (std::getline(std::cin, line) && !line.empty()) sel = line;
+  if (std::getline(std::cin, line) && !line.empty()) {
+    sel = line;
+  }
 
-  cfg.instanceIndices = parseSelection(sel, static_cast<int>(paths.size()));
+  config.instance_indexes = parseSelection(sel, static_cast<int>(paths.size()));
 
-  if (cfg.instanceIndices.empty()) {
+  if (config.instance_indexes.empty()) {
     std::cout << "  (selección vacía — se usan todas)\n";
-    cfg.instanceIndices.resize(paths.size());
-    for (int i = 0; i < (int)paths.size(); ++i) cfg.instanceIndices[i] = i;
+    config.instance_indexes.resize(paths.size());
+    for (int i = 0; i < (int)paths.size(); ++i) {
+      config.instance_indexes[i] = i;
+    }
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Constructor privado
-// ══════════════════════════════════════════════════════════════════════════════
-
-Menu::Menu(const std::string& instancePath, const RunConfig& cfg)
-    : instancePath_(instancePath),
-      instanceName_(fs::path(instancePath).filename().string()),
-      inst_(InstanceReader::read(instancePath)),
-      cfg_(cfg) {
-  localSearchOps_ = {
-    std::make_shared<Shifts>(),
-    std::make_shared<SwapClients>(),
-    std::make_shared<SwapFacilities>()
-  };
+/**
+ * @brief Constructor of the Menu class that initializes the instance path, name, loads the instance data, and sets up the local search operators.
+ * @param instance_path The file path to the instance data.
+ * @param config The RunConfig containing the user's algorithm and instance selections.
+ */
+Menu::Menu(const std::string& instance_path, const RunConfig& config) : instance_path_(instance_path), instance_name_(std::filesystem::path(instance_path).filename().string()),
+                                                                       inst_(InstanceReader::read(instance_path)), config_(config) {                                                                     
+  local_seach_ops_ = {std::make_shared<Shifts>(),std::make_shared<SwapClients>(),std::make_shared<SwapFacilities>()};
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Ejecución por instancia
-// ══════════════════════════════════════════════════════════════════════════════
-
+/**
+ * @brief Executes the selected algorithms on the loaded instance, applying local search and printing results with timing. It runs the Greedy algorithm if selected, followed by GRASP if selected, and applies local search to each solution before reporting.
+ * The results include the instance name, algorithm label, solution cost, and execution time. If any algorithm produces an infeasible solution after local search, an exception is thrown with details about the infe
+ */
 void Menu::run() {
-  std::cout << "Instancia : " << instanceName_ << "\n"
-            << "Instalaciones (m): " << inst_.m
-            << "   Clientes (n): "   << inst_.n
-            << "   Incompatibilidades: " << inst_.numIncompatibilities
+  std::cout << "Instancia : " << instance_name_ << "\n"
+            << "Instalaciones (warehouses): " << inst_.warehouses
+            << "   Clientes (stores): "   << inst_.stores
+            << "   Incompatibilidades: " << inst_.num_incompatibilities
             << "\n\n";
 
   printTableHeader();
 
-  if (cfg_.runGreedy) runGreedyAlgo();
-  if (cfg_.runGRASP)  runGRASPAlgo();
+  if (config_.run_greedy) runGreedyAlgo();
+  if (config_.run_GRASP)  runGRASPAlgo();
 
   std::cout << "\n";
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Algoritmos
-// ══════════════════════════════════════════════════════════════════════════════
-
-void Menu::applyLocalSearches(Solution& sol) const {
+/**
+ * @brief Applies the configured local search operators iteratively to the given solution until no further improvements can be made. After applying local search, it checks the feasibility of the solution and throws an exception if it is infeasible.
+ * @param solution The Solution object to improve using local search.
+ */
+void Menu::applyLocalSearches(Solution& solution) const {
   bool improved = true;
   while (improved) {
     improved = false;
-    for (auto& op : localSearchOps_)
-      if (op->improve(sol, inst_)) improved = true;
+    for (auto& op : local_seach_ops_) {
+      if (op->improve(solution, inst_)) improved = true;
+    }
   }
-#ifndef NDEBUG
-  sol.checkFeasibilityAfterLS(inst_, "applyLocalSearches");
-#endif
+  solution.checkFeasibilityAfterLS(inst_, "applyLocalSearches");
 }
 
+/**
+ * @brief Runs the Greedy algorithm on the loaded instance and applies local search.
+ */
 void Menu::runGreedyAlgo() {
   GreedyConstructive greedy;
-  Timer t;
-  Solution sol = greedy.build(inst_);
-  printSolutionRow(instanceName_ + " [voraz]", sol, inst_, t.elapsedSeconds());
+  Timer time;
+  Solution solution = greedy.build(inst_);
+  printSolutionRow(instance_name_ + " [voraz]", solution, inst_, time.elapsedSeconds());
 
-  t.reset();
-  applyLocalSearches(sol);
-  printSolutionRow(instanceName_ + " [voraz+LS]", sol, inst_, t.elapsedSeconds());
+  time.reset();
+  applyLocalSearches(solution);
+  printSolutionRow(instance_name_ + " [voraz+LS]", solution, inst_, time.elapsedSeconds());
 }
 
+/**
+ * @brief Runs the GRASP algorithm on the loaded instance with the configured parameters and applies local search. It performs multiple iterations of GRASP, keeping track of the best solution found across all iterations, and reports the best solution at the end.
+ * Each iteration of GRASP is reseeded with the current time to explore different random solutions, and local search is applied to each solution to find local optima. The final reported solution is the
+ */
 void Menu::runGRASPAlgo() {
-  // Cada iteración resiembra con el reloj → soluciones constructivas distintas.
-  // Con muchas iteraciones se exploran cuencas de atracción diferentes;
-  // la LS las profundiza y se reporta la mejor encontrada.
-  GRASPConstructive grasp(cfg_.graspAlpha);
-  Solution bestSol;
-  double   bestCost = std::numeric_limits<double>::max();
+  GRASPConstructive grasp(config_.grasp_alpha);
+  Solution best_solution;
+  double   best_cost = std::numeric_limits<double>::max();
 
-  Timer t;
-  for (int iter = 0; iter < cfg_.graspIters; ++iter) {
+  Timer time;
+  for (int iter = 0; iter < config_.grasp_iters; ++iter) {
     grasp.reseed();
-    Solution sol = grasp.build(inst_);
-    applyLocalSearches(sol);
-    if (sol.getTotalCost() < bestCost) {
-      bestCost = sol.getTotalCost();
-      bestSol  = sol;
+    Solution solution = grasp.build(inst_);
+    applyLocalSearches(solution);
+    if (solution.getTotalCost() < best_cost) {
+      best_cost = solution.getTotalCost();
+      best_solution  = solution;
     }
   }
 
-  const std::string label = instanceName_
-      + " [GRASP α=" + std::to_string(cfg_.graspAlpha)
-      + " i="        + std::to_string(cfg_.graspIters) + "]";
-  printSolutionRow(label, bestSol, inst_, t.elapsedSeconds());
+  const std::string label = instance_name_
+      + " [GRASP α=" + std::to_string(config_.grasp_alpha)
+      + " i="        + std::to_string(config_.grasp_iters) + "]";
+  printSolutionRow(label, best_solution, inst_, time.elapsedSeconds());
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Utilidades de instancias
-// ══════════════════════════════════════════════════════════════════════════════
-
+/**
+ * @brief Finds all instance files with a .dzn extension in the given directory and returns their paths as a vector of strings. If the directory does not exist or contains no .dzn files, an empty vector is returned.
+ * @param dir The directory to search for instance files.
+ * @return A vector of strings containing the file paths of all .dzn instance files found
+ */
 std::vector<std::string> Menu::findInstances(const std::string& dir) {
   std::vector<std::string> paths;
-  if (!fs::is_directory(dir)) return paths;
-  for (const auto& e : fs::directory_iterator(dir))
-    if (e.path().extension() == ".dzn")
-      paths.push_back(e.path().string());
+  if (!std::filesystem::is_directory(dir)) return paths;
+  for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+    if (entry.path().extension() == ".dzn") {
+      paths.push_back(entry.path().string());
+    }
+  }
   std::sort(paths.begin(), paths.end());
   return paths;
 }
 
+/**
+ * @brief Displays a numbered list of available instance files to the user, showing only the file names without paths. This is used in the instance selection menu to help the user choose which instances to run.
+ * @param paths A vector of strings containing the file paths of available instance files.
+ */
 void Menu::listInstances(const std::vector<std::string>& paths) {
   std::cout << "\nInstancias disponibles:\n";
-  for (size_t i = 0; i < paths.size(); ++i)
-    std::cout << "  [" << (i + 1) << "] "
-              << fs::path(paths[i]).filename().string() << "\n";
+  for (size_t i = 0; i < paths.size(); ++i) {
+    std::cout << "  [" << (i + 1) << "] " << std::filesystem::path(paths[i]).filename().string() << "\n";
+  }
 }
 
+/**
+ * @brief Parses the user's input for instance selection, allowing for individual indexes, ranges, or "all". It validates the input and returns a vector of selected instance indexes (0-based) based on the total number of available instances.
+ * @param input The user's input string for instance selection.
+ * @param total The total number of available instances to validate against.
+ * @return A vector of integers representing the selected instance indexes (0-based).
+ */
 std::vector<int> Menu::parseSelection(const std::string& input, int total) {
   std::vector<int> selected;
 
@@ -272,13 +283,18 @@ std::vector<int> Menu::parseSelection(const std::string& input, int total) {
       try {
         const int a = std::stoi(token.substr(0, dash));
         const int b = std::stoi(token.substr(dash + 1));
-        for (int x = a; x <= b; ++x)
-          if (x >= 1 && x <= total) selected.push_back(x - 1);
+        for (int demand_fraction = a; demand_fraction <= b; ++demand_fraction) {
+          if (demand_fraction >= 1 && demand_fraction <= total) {
+            selected.push_back(demand_fraction - 1);
+          }
+        }
       } catch (...) {}
     } else {
       try {
-        const int x = std::stoi(token);
-        if (x >= 1 && x <= total) selected.push_back(x - 1);
+        const int demand_fraction = std::stoi(token);
+        if (demand_fraction >= 1 && demand_fraction <= total) {
+          selected.push_back(demand_fraction - 1);
+        }
       } catch (...) {}
     }
   }

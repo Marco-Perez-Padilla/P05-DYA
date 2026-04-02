@@ -12,39 +12,25 @@
 ** Archivo help_functions.h: funciones de presentación de resultados
 **/
 
-#pragma once
+#ifndef HELP_FUNCTIONS_H
+#define HELP_FUNCTIONS_H
+
 #include <string>
 #include <chrono>
 #include "../model/instance.h"
 #include "../model/solution.h"
 
-// ── Validación de argumentos ──────────────────────────────────────────────────
 
 void Help();
 void Usage();
-
-/**
- * @brief Valida los argumentos de línea de comandos.
- * @return  0 si se solicitó --help (terminar con éxito)
- *         -1 si los argumentos son correctos (continuar)
- *          1 si los argumentos son incorrectos (terminar con error)
- */
 int  ValidateArguments(int argc, char* argv[]);
-
-// ── Tabla de resultados ───────────────────────────────────────────────────────
 void printTableHeader();
-void printSolutionRow(const std::string& label,
-                      const Solution&    sol,
-                      const Instance&    inst,
-                      double             elapsedSeconds);
+void printSolutionRow(const std::string& label, const Solution& solution, const Instance& inst, double elapsedSeconds);
 
-// ── Temporizador simple ───────────────────────────────────────────────────────
 struct Timer {
-  std::chrono::high_resolution_clock::time_point t0 =
-      std::chrono::high_resolution_clock::now();
-  void reset() { t0 = std::chrono::high_resolution_clock::now(); }
-  double elapsedSeconds() const {
-    return std::chrono::duration<double>(
-        std::chrono::high_resolution_clock::now() - t0).count();
-  }
+  std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
+  void reset() {t0 = std::chrono::high_resolution_clock::now();}
+  double elapsedSeconds() const {return std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - t0).count();}
 };
+
+#endif

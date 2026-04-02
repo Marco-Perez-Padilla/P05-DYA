@@ -1,90 +1,106 @@
+/** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo grasp_constructive.cc: Implementación: Clase GRASPConstructive para el MS-CFLP-CI
+**/
+
 #include "grasp_constructive.h"
 #include <numeric>
 #include <algorithm>
 
+/**
+ * @brief GRASP constructive algorithm for MS-CFLP-CI
+ * @param inst The instance of the problem.
+ * @return The constructed solution.
+ */
 Solution GRASPConstructive::build(const Instance& inst) {
-    Solution sol = Solution::createEmpty(inst);
-    const int m = inst.m, n = inst.n;
+  Solution solution = Solution::createEmpty(inst);
+  const int warehouses = inst.warehouses, stores = inst.stores;
 
-    // ── FASE 1: Selección de instalaciones (aleatorizada) ────────────────
-    // Ordenar instalaciones por coste fijo ascendente
-    std::vector<int> order(m);
-    std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(),
-              [&](int a, int b){ return inst.fixedCost[a] < inst.fixedCost[b]; });
+  // Warehouses randomized selection: open facilities in ascending order of fixed cost until demand is covered,
+  std::vector<int> order(warehouses);
+  std::iota(order.begin(), order.end(), 0);
+  std::sort(order.begin(), order.end(),
+            [&](int a, int b){ return inst.fixed_cost[a] < inst.fixed_cost[b]; });
 
-    double totalDemand = 0.0;
-    for (double d : inst.demand) totalDemand += d;
+  double total_demand = 0.0;
+  for (double dmd : inst.demand) {
+    total_demand += dmd;
+  }
 
-    double accCap = 0.0;
-    int idx = 0;
+  double acc_cap = 0.0;
+  int index = 0;
 
-    // Abrir instalaciones eligiendo aleatoriamente de la LRC
-    while (idx < m && accCap < totalDemand) {
-        const int rclSize = std::min(alpha_, m - idx);
-        std::uniform_int_distribution<int> pick(0, rclSize - 1);
-        const int chosen = order[idx + pick(rng_)];
+  // Open warehouses choosing randomly from the RCL until demand is covered
+  while (index < warehouses && acc_cap < total_demand) {
+    const int rcl_size = std::min(alpha_, warehouses - index);
+    std::uniform_int_distribution<int> pick(0, rcl_size - 1);
+    const int chosen = order[index + pick(rng_)];
 
-        // Llevar el elegido a la posición idx (intercambio para no repetir)
-        auto it = std::find(order.begin() + idx,
-                            order.begin() + idx + rclSize, chosen);
-        std::iter_swap(it, order.begin() + idx);
+    auto it = std::find(order.begin() + index,
+                        order.begin() + index + rcl_size, chosen);
+    std::iter_swap(it, order.begin() + index);
 
-        sol.openFacility(chosen, inst);
-        accCap += inst.capacity[chosen];
-        ++idx;
+    solution.openFacility(chosen, inst);
+    acc_cap += inst.capacity[chosen];
+    ++index;
+  }
+
+  //Add extra facilities as slack for incompatibilities choosing randomly from the RCL
+  for (int extra = 0; extra < holgura_ && index < warehouses; ++extra) {
+    const int rcl_size = std::min(alpha_, warehouses - index);
+    std::uniform_int_distribution<int> pick(0, rcl_size - 1);
+    const int chosen = order[index + pick(rng_)];
+
+    auto it = std::find(order.begin() + index,
+                        order.begin() + index + rcl_size, chosen);
+    std::iter_swap(it, order.begin() + index);
+
+    solution.openFacility(chosen, inst);
+    ++index;
+  }
+
+  // Clients randomized assignation: for each client, assign to open facilities in ascending order of transport cost, checking capacity and incompatibilities. 
+  // The order of clients is also randomized.
+  std::vector<int> client_order(stores);
+  std::iota(client_order.begin(), client_order.end(), 0);
+  std::shuffle(client_order.begin(), client_order.end(), rng_);
+
+  for (int i : client_order) {
+    std::vector<int> fac_order;
+    fac_order.reserve(warehouses);
+    for (int j = 0; j < warehouses; ++j) {
+      if (solution.open[j]) fac_order.push_back(j);
     }
+    std::sort(fac_order.begin(), fac_order.end(),
+              [&](int a, int b){ return inst.supply_cost[i][a] < inst.supply_cost[i][b]; });
 
-    // Añadir k instalaciones extra de holgura (también con LRC)
-    for (int extra = 0; extra < k_ && idx < m; ++extra) {
-        const int rclSize = std::min(alpha_, m - idx);
-        std::uniform_int_distribution<int> pick(0, rclSize - 1);
-        const int chosen = order[idx + pick(rng_)];
+    double remaining = inst.demand[i];
+    while (remaining > EPS) {
+      std::vector<int> rcl;
+      rcl.reserve(alpha_);
+      for (int j : fac_order) {
+          if (solution.incomp_count[i][j] > 0) continue;
+          if (solution.residual_cap[j] < EPS)  continue;
+          rcl.push_back(j);
+          if ((int)rcl.size() >= alpha_) break;
+      }
+      if (rcl.empty()) break; 
 
-        auto it = std::find(order.begin() + idx,
-                            order.begin() + idx + rclSize, chosen);
-        std::iter_swap(it, order.begin() + idx);
+      std::uniform_int_distribution<int> pick(0, (int)rcl.size() - 1);
+      const int j = rcl[pick(rng_)];
 
-        sol.openFacility(chosen, inst);
-        ++idx;
+      const double q = std::min(remaining, solution.residual_cap[j]);
+      solution.assign(i, j, q, inst);
+      remaining -= q;
     }
-
-    // ── FASE 2: Asignación de clientes (orden y LRC aleatorizados) ───────
-    std::vector<int> clientOrder(n);
-    std::iota(clientOrder.begin(), clientOrder.end(), 0);
-    std::shuffle(clientOrder.begin(), clientOrder.end(), rng_);
-
-    for (int i : clientOrder) {
-        // Obtener instalaciones abiertas ordenadas por coste para el cliente i
-        std::vector<int> facOrder;
-        facOrder.reserve(m);
-        for (int j = 0; j < m; ++j)
-            if (sol.open[j]) facOrder.push_back(j);
-        std::sort(facOrder.begin(), facOrder.end(),
-                  [&](int a, int b){ return inst.supplyCost[i][a] < inst.supplyCost[i][b]; });
-
-        double remaining = inst.demand[i];
-        while (remaining > EPS) {
-            // Construir LRC: las alpha mejores instalaciones compatibles con capacidad
-            std::vector<int> rcl;
-            rcl.reserve(alpha_);
-            for (int j : facOrder) {
-                if (sol.incompCount[i][j] > 0) continue; // incompatible
-                if (sol.residualCap[j] < EPS)  continue; // sin capacidad
-                rcl.push_back(j);
-                if ((int)rcl.size() >= alpha_) break;
-            }
-            if (rcl.empty()) break; // no se puede satisfacer más demanda
-
-            // Elegir aleatoriamente de la LRC
-            std::uniform_int_distribution<int> pick(0, (int)rcl.size() - 1);
-            const int j = rcl[pick(rng_)];
-
-            const double q = std::min(remaining, sol.residualCap[j]);
-            sol.assign(i, j, q, inst);
-            remaining -= q;
-        }
-    }
-
-    return sol;
+  }
+  return solution;
 }

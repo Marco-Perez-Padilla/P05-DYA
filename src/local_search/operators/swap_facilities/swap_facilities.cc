@@ -1,116 +1,126 @@
+/**
+** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo swap_facilities.cc: Operador de búsqueda local para intercambiar instalaciones
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**/
+
 #include "./swap_facilities.h"
 #include <limits>
 #include <tuple>
 #include <vector>
 
-bool SwapFacilities::improve(Solution& sol, const Instance& inst) {
-    bool anyImproved = false;
+/**
+ * @brief Implementation of the SwapFacilities local search operator. For each pair of (open facility to close, closed facility to open), it simulates closing the open facility and opening the closed one, redistributing the clients of the closed facility to the cheapest compatible open facility (including the newly opened one). If this results in a cost improvement, it applies the change.
+ * @param solution The current solution to be improved.
+ * @param inst The instance providing the problem data.
+ * @return true if an improvement was found and applied, false otherwise.
+ */
+bool SwapFacilities::improve(Solution& solution, const Instance& inst) {
+  bool any_improved = false;
 
-    bool foundMove = true;
-    while (foundMove) {
-        foundMove = false;
+  bool found_move = true;
+  while (found_move) {
+    found_move = false;
 
-        // Iterar sobre instalaciones abiertas candidatas a cerrar
-        for (int jclose = 0; jclose < inst.m && !foundMove; ++jclose) {
-            if (!sol.open[jclose]) continue;
-            if (sol.clientsOf[jclose].empty()) {
-                // Instalación abierta sin clientes: cerrar directamente
-                const double delta = -inst.fixedCost[jclose];
-                if (delta < -EPS) {
-                    sol.closeFacility(jclose, inst);
-                    foundMove   = true;
-                    anyImproved = true;
-                }
-                continue;
-            }
-
-            // Copia de la lista de clientes (evitar modificar durante iteración)
-            const std::vector<int> clients = sol.clientsOf[jclose];
-
-            // Probar: jnew = -1 (cierre puro) y jnew >= 0 (intercambio)
-            for (int jnew = -1; jnew < inst.m && !foundMove; ++jnew) {
-                if (jnew >= 0 && sol.open[jnew]) continue; // solo cerradas
-                if (jnew == jclose) continue;
-
-                // ── Simulación ───────────────────────────────────────────
-                // Capacidad residual simulada (solo modificamos localmente)
-                std::vector<double> simResidual(inst.m);
-                for (int j = 0; j < inst.m; ++j)
-                    simResidual[j] = sol.residualCap[j];
-                if (jnew >= 0)
-                    simResidual[jnew] = inst.capacity[jnew]; // jnew se abre
-
-                double transportDelta = 0.0;
-                bool   feasible       = true;
-
-                // Plan de reasignación: (cliente, destino, cantidad)
-                std::vector<std::tuple<int,int,double>> plan;
-                plan.reserve(clients.size());
-
-                for (int i : clients) {
-                    const double q = sol.x[i][jclose] * inst.demand[i];
-
-                    // Buscar la instalación destino más barata compatible y con capacidad
-                    int    bestJ    = -1;
-                    double bestCost = std::numeric_limits<double>::max();
-
-                    // Priorizar jnew (siempre compatible: aún no tiene clientes)
-                    if (jnew >= 0 && simResidual[jnew] >= q - EPS) {
-                        bestJ    = jnew;
-                        bestCost = inst.supplyCost[i][jnew];
-                    }
-
-                    // Buscar entre las demás instalaciones abiertas
-                    for (int j = 0; j < inst.m; ++j) {
-                        if (j == jclose || j == jnew) continue;
-                        if (!sol.open[j])              continue;
-                        // Compatibilidad con clientes existentes en j
-                        // (los clientes de jclose son mutuamente compatibles,
-                        //  por lo que agregar varios de ellos al mismo j no
-                        //  genera incompatibilidades entre sí)
-                        if (!sol.w[i][j] && sol.incompCount[i][j] > 0) continue;
-                        if (simResidual[j] < q - EPS) continue;
-
-                        if (inst.supplyCost[i][j] < bestCost) {
-                            bestCost = inst.supplyCost[i][j];
-                            bestJ    = j;
-                        }
-                    }
-
-                    if (bestJ < 0) { feasible = false; break; }
-
-                    simResidual[bestJ] -= q;
-                    transportDelta     += (inst.supplyCost[i][bestJ]
-                                         - inst.supplyCost[i][jclose]) * q;
-                    plan.emplace_back(i, bestJ, q);
-                }
-
-                if (!feasible) continue;
-
-                const double fixedDelta = (jnew >= 0 ? inst.fixedCost[jnew] : 0.0)
-                                        - inst.fixedCost[jclose];
-                const double totalDelta = fixedDelta + transportDelta;
-
-                if (totalDelta < -EPS) {
-                    // ── Aplicar el movimiento ────────────────────────────
-                    // 1. Eliminar todas las asignaciones de jclose
-                    for (auto& [i, dest, q] : plan)
-                        sol.removeAssignment(i, jclose, q, inst);
-                    sol.closeFacility(jclose, inst);
-
-                    // 2. Abrir jnew (si procede)
-                    if (jnew >= 0) sol.openFacility(jnew, inst);
-
-                    // 3. Crear nuevas asignaciones
-                    for (auto& [i, dest, q] : plan)
-                        sol.assign(i, dest, q, inst);
-
-                    foundMove   = true;
-                    anyImproved = true;
-                }
-            }
+    // Iterate over all open facilities to consider closing
+    for (int jclose = 0; jclose < inst.warehouses && !found_move; ++jclose) {
+      if (!solution.open[jclose]) continue;
+      if (solution.clients_of[jclose].empty()) {
+        const double delta = -inst.fixed_cost[jclose];
+        if (delta < -EPS) {
+          solution.closeFacility(jclose, inst);
+          found_move   = true;
+          any_improved = true;
         }
-    }
+        continue;
+      }
 
-    return anyImproved;
+      const std::vector<int> clients = solution.clients_of[jclose];
+      for (int jnew = -1; jnew < inst.warehouses && !found_move; ++jnew) {
+        if (jnew >= 0 && solution.open[jnew]) continue; // solo cerradas
+        if (jnew == jclose) continue;
+
+        std::vector<double> sim_residual(inst.warehouses);
+        for (int j = 0; j < inst.warehouses; ++j)
+            sim_residual[j] = solution.residual_cap[j];
+        if (jnew >= 0)
+            sim_residual[jnew] = inst.capacity[jnew]; // jnew se abre
+
+        double transportDelta = 0.0;
+        bool   feasible       = true;
+
+        std::vector<std::tuple<int,int,double>> plan;
+        plan.reserve(clients.size());
+
+        for (int i : clients) {
+          const double q = solution.demand_fraction[i][jclose] * inst.demand[i];
+
+          int best_j    = -1;
+          double best_cost = std::numeric_limits<double>::max();
+
+          if (jnew >= 0 && sim_residual[jnew] >= q - EPS) {
+              best_j    = jnew;
+              best_cost = inst.supply_cost[i][jnew];
+          }
+
+          for (int j = 0; j < inst.warehouses; ++j) {
+            if (j == jclose || j == jnew) continue;
+            if (!solution.open[j]) continue;
+            if (!solution.partial_attend[i][j] && solution.incomp_count[i][j] > 0) continue;
+            if (sim_residual[j] < q - EPS) continue;
+            if (inst.supply_cost[i][j] < best_cost) {
+              best_cost = inst.supply_cost[i][j];
+              best_j    = j;
+            }
+          }
+
+          if (best_j < 0) { feasible = false; break; }
+
+          sim_residual[best_j] -= q;
+          transportDelta += (inst.supply_cost[i][best_j]
+                            - inst.supply_cost[i][jclose]) * q;
+          plan.emplace_back(i, best_j, q);
+        }
+
+        if (!feasible) continue;
+
+        const double fixedDelta = (jnew >= 0 ? inst.fixed_cost[jnew] : 0.0) - inst.fixed_cost[jclose];
+        const double totalDelta = fixedDelta + transportDelta;
+
+        // If the total cost change is an improvement, apply the plan: 
+        // 1. Cerrar jclose y eliminar sus asignaciones, 2. Abrir jnew (si procede), 3. Crear nuevas asignaciones
+        if (totalDelta < -EPS) {
+          for (auto& [i, dest, q] : plan) {
+            solution.removeAssignment(i, jclose, q, inst);
+          }
+          solution.closeFacility(jclose, inst);
+
+          if (jnew >= 0) solution.openFacility(jnew, inst);
+
+          for (auto& [i, dest, q] : plan) {
+              solution.assign(i, dest, q, inst);
+          }
+          
+          found_move   = true;
+          any_improved = true;
+        }
+      }
+    }
+  }
+
+  return any_improved;
 }
