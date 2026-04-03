@@ -16,6 +16,7 @@
 #define INSTANCE_READER_H
 
 #include "../model/instance.h"
+#include <string>
 
 /**
  * @brief Lee una instancia MS-CFLP-CI desde un fichero .dzn
