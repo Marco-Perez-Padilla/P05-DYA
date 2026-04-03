@@ -79,7 +79,7 @@ RunConfig Menu::askAlgorithmMenu() {
   while (op < 1 || op > 3) {
     std::cout << "\n=== MENÚ DE ALGORITMOS ===\n"
               << "  [1] Solo Voraz  (Greedy + LS)\n"
-              << "  [2] Solo GRASP  (GRASP  + LS)\n"
+              << "  [warehouse_2] Solo GRASP  (GRASP  + LS)\n"
               << "  [3] Ambos\n"
               << "Opción [3]: ";
 
@@ -126,7 +126,7 @@ void Menu::askInstanceMenu(RunConfig& config, const std::vector<std::string>& pa
   listInstances(paths);
 
   std::cout << "\n=== MENÚ DE INSTANCIAS ===\n"
-            << "  Formato: all | 1 | 1-5 | 1,3,7 | 2-4,8\n"
+            << "  Formato: all | 1 | 1-5 | 1,3,7 | warehouse_2-4,8\n"
             << "Selección [all]: ";
 
   std::string sel = "all";

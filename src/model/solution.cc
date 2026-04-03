@@ -128,8 +128,7 @@ void Solution::removeAssignment(int i, int j, double amount, const Instance& ins
  * @return true if the solution is feasible, false otherwise.
  */
 bool Solution::isFeasible(const Instance& inst) const {
-  return countIncompatibilityViolations(inst) == 0
-      && computeUnsatisfiedDemand(inst) < EPS;
+  return countIncompatibilityViolations(inst) == 0 && computeUnsatisfiedDemand(inst) < EPS;
 }
 
 /**
@@ -139,9 +138,9 @@ bool Solution::isFeasible(const Instance& inst) const {
  */
 int Solution::countIncompatibilityViolations(const Instance& inst) const {
   int violations = 0;
-  for (auto& [i1, i2] : inst.incompatible_pairs)
+  for (auto& [client_1, client_2] : inst.incompatible_pairs)
     for (int j = 0; j < inst.warehouses; ++j)
-      if (partial_attend[i1][j] && partial_attend[i2][j]) ++violations;
+      if (partial_attend[client_1][j] && partial_attend[client_2][j]) ++violations;
   return violations;
 }
 
@@ -176,8 +175,7 @@ int Solution::openFacilitiesCount() const {
  * @param context An optional string providing context about the local search operation that was performed, included in the exception message if the solution is infeasible.
  * @throws InfeasibleSolutionException if the solution is infeasible, with details about the number of incompatibility violations and
  */
-void Solution::checkFeasibilityAfterLS(const Instance& inst,
-                                        const std::string& context) const {
+void Solution::checkFeasibilityAfterLS(const Instance& inst, const std::string& context) const {
   if (!isFeasible(inst)) {
     const int    violations  = countIncompatibilityViolations(inst);
     const double unsatisfied = computeUnsatisfiedDemand(inst);

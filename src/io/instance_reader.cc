@@ -18,20 +18,30 @@
 #include <sstream>
 #include <algorithm>
 
-// ── Utilidades de parseo internas ─────────────────────────────────────────────
-
+/**
+ * @brief Reads the entire content of a file into a string. Throws exceptions if the file cannot be opened or is empty.
+ * @param path The file path to read from.
+ * @return The content of the file as a string.
+ * @throws FileNotFoundException if the file cannot be opened.
+ * @throws EmptyFileException if the file is empty or has no valid content.
+ */
 static std::string readFile(const std::string& path) {
-  std::ifstream f(path);
-  if (!f) throw FileNotFoundException(path);
+  std::ifstream file(path);
+  if (!file) throw FileNotFoundException(path);
 
-  std::string content{std::istreambuf_iterator<char>(f), {}};
+  std::string content{std::istreambuf_iterator<char>(file), {}};
   if (content.empty()) throw EmptyFileException(path);
   return content;
 }
 
-/// Extrae el valor textual de "Key = ...;" dentro de content.
-static std::string extractValue(const std::string& content,
-                                 const std::string& key) {
+/**
+ * @brief Extracts the value associated with a given key from the content string. 
+ * @param content The string content to search within.
+ * @param key The key whose value is to be extracted.
+ * @return The value associated with the key as a string.
+ * @throws InvalidDataException if the key is not found or if the expected format is not met
+ */
+static std::string extractValue(const std::string& content, const std::string& key) {
   for (const std::string& search : {key + " =", key + "="}) {
     size_t pos = content.find(search);
     if (pos == std::string::npos) continue;
@@ -44,19 +54,34 @@ static std::string extractValue(const std::string& content,
   throw InvalidDataException("Clave no encontrada en la instancia: " + key);
 }
 
-static std::string trim(const std::string& s) {
-  const std::string ws = " \trimmed\n\r";
-  size_t a = s.find_first_not_of(ws);
-  if (a == std::string::npos) return "";
-  size_t b = s.find_last_not_of(ws);
-  return s.substr(a, b - a + 1);
+/**
+ * @brief Trims leading and trailing whitespace characters from a string.
+ * @param string The string to be trimmed.
+ * @return A new string with leading and trailing whitespace removed.
+ */
+static std::string trim(const std::string& string) {
+  const std::string whitespace = " \trimmed\n\r";
+  size_t first = string.find_first_not_of(whitespace);
+  if (first == std::string::npos) return "";
+  size_t last = string.find_last_not_of(whitespace);
+  return string.substr(first, last - first + 1);
 }
 
+/**
+ * @brief Parses a scalar integer value from a string, trimming whitespace. 
+ * @param val The string containing the scalar value to parse.
+ * @return The parsed integer value.
+ */
 static int parseScalar(const std::string& val) {
   return std::stoi(trim(val));
 }
 
-/// Parsea "[v1, v2, ...]" → vector<double>
+
+/**
+ * @brief Parses a 1D array from a string in the format "[v0, v1, v2,...]". Trims whitespace and converts values to doubles.
+ * @param val The string containing the 1D array to parse.
+ * @return A vector of doubles representing the parsed 1D array.
+ */
 static std::vector<double> parse1DArray(const std::string& val) {
   size_t start = val.find('[') + 1;
   size_t end   = val.rfind(']');
@@ -72,7 +97,11 @@ static std::vector<double> parse1DArray(const std::string& val) {
   return result;
 }
 
-/// Parsea "[|r0c0,...|r1c0,...|]" → vector<vector<double>>
+/**
+ * @brief Parses a 2D array from a string in the format "[| r1c1, r1c2 | r2c1, r2c2 | ...]". Trims whitespace and converts values to doubles. Rows are separated by '|'.
+ * @param val The string containing the 2D array to parse.
+ * @return A vector of vectors of doubles representing the parsed 2D array.
+ */
 static std::vector<std::vector<double>> parse2DArray(const std::string& val) {
   size_t start = val.find('[') + 1;
   size_t end   = val.rfind(']');
@@ -80,9 +109,9 @@ static std::vector<std::vector<double>> parse2DArray(const std::string& val) {
 
   std::vector<std::vector<double>> result;
   std::stringstream ss(inner);
-  std::string rowStr;
-  while (std::getline(ss, rowStr, '|')) {
-    const std::string trimmed = trim(rowStr);
+  std::string row_string;
+  while (std::getline(ss, row_string, '|')) {
+    const std::string trimmed = trim(row_string);
     if (trimmed.empty()) continue;
 
     std::vector<double> row;
@@ -97,19 +126,28 @@ static std::vector<std::vector<double>> parse2DArray(const std::string& val) {
   return result;
 }
 
-/// Parsea "[| i1, i2 | ... |]" → pares de ints en base 0
+/**
+ * @brief Parses a list of incompatible client pairs from a string in the format "[| client_1, warehouse_1 | client_2, warehouse_2 | ...]". Trims whitespace and converts values to integers. Each pair is expected to have exactly two integers.
+ * @param val The string containing the incompatible pairs to parse.
+ * @return A vector of pairs of integers representing the incompatible client pairs, with client indexes converted
+ */
 static std::vector<std::pair<int,int>> parsePairs(const std::string& val) {
   const auto rows = parse2DArray(val);
   std::vector<std::pair<int,int>> result;
   result.reserve(rows.size());
-  for (auto& row : rows)
-    if (row.size() == 2)
-      result.push_back({(int)row[0] - 1, (int)row[1] - 1}); // base 1 → 0
+  for (auto& row : rows) {
+    if (row.size() == 2) {
+      result.push_back({(int)row[0] - 1, (int)row[1] - 1}); 
+    }
+  }
   return result;
 }
 
-// ── Implementación pública ────────────────────────────────────────────────────
-
+/**
+ * @brief Reads an instance from a .dzn file specified by the filepath. It reads the file content, extracts and parses all required fields to construct an Instance object, and returns it. The method handles parsing of scalars, 1D arrays, 2D arrays, and incompatible pairs, as well as constructing auxiliary data structures for quick compatibility checks.
+ * @param filepath The path to the .dzn file containing the instance data.
+ * @return An Instance object populated with the data from the file.
+ */
 Instance InstanceReader::read(const std::string& filepath) {
   const std::string content = readFile(filepath);
 
@@ -125,15 +163,14 @@ Instance InstanceReader::read(const std::string& filepath) {
   inst.num_incompatibilities = parseScalar(extractValue(content, "Incompatibilities"));
   inst.incompatible_pairs    = parsePairs(extractValue(content, "IncompatiblePairs"));
 
-  // ── Construir estructuras de consulta rápida ──────────────────────────
   inst.incomp_neighbors.assign(inst.stores, {});
   inst.is_incompat.assign(inst.stores, std::vector<bool>(inst.stores, false));
 
-  for (auto& [i1, i2] : inst.incompatible_pairs) {
-    inst.incomp_neighbors[i1].push_back(i2);
-    inst.incomp_neighbors[i2].push_back(i1);
-    inst.is_incompat[i1][i2] = true;
-    inst.is_incompat[i2][i1] = true;
+  for (auto& [client_1, client_2] : inst.incompatible_pairs) {
+    inst.incomp_neighbors[client_1].push_back(client_2);
+    inst.incomp_neighbors[client_2].push_back(client_1);
+    inst.is_incompat[client_1][client_2] = true;
+    inst.is_incompat[client_2][client_1] = true;
   }
 
   return inst;

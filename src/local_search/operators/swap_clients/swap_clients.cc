@@ -1,73 +1,89 @@
+/**
+** Universidad de La Laguna
+** Escuela Superior de Ingenieria y Tecnologia
+** Grado en Ingenieria Informatica
+** Asignatura: Diseño y Analisis de Algoritmos
+** Curso: 3º
+** Practica 5: Algoritmos constructivos y búsquedas por entornos
+** Autor: Marco Pérez Padilla
+** Correo: alu0101469348@ull.edu.es
+** Fecha: 31/03/2026
+
+** Archivo swap_clients.h: Implementacion: Operador de búsqueda local para intercambiar clientes
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**/
+
 #include "./swap_clients.h"
 #include <limits>
 
+/**
+ * @brief Implementation of the SwapClients local search operator. For each pair of clients client_1 and client_2 that are both served entirely by a single facility (|facilities_of[i]| == 1), 
+ * it attempts to swap their assigned facilities. It checks capacity and incompatibility constraints for the swap, and if it results in a cost improvement, it applies the change.
+ * @param solution The current solution to be improved.
+ * @param inst The instance providing the problem data.
+ * @return true if an improvement was found and applied, false otherwise.
+ */
 bool SwapClients::improve(Solution& solution, const Instance& inst) {
-    bool any_improved = false;
+  bool any_improved = false;
 
-    bool found_move = true;
-    while (found_move) {
-        found_move = false;
+  bool found_move = true;
+  while (found_move) {
+    found_move = false;
 
-        double bestDelta = -EPS;
-        int bestI1 = -1, bestI2 = -1, bestJ1 = -1, bestJ2 = -1;
+    double best_delta = -EPS;
+    int best_client_1 = -1, best_client_2 = -1, best_warehouse_1 = -1, best_warehouse_2 = -1;
 
-        // Solo considerar clientes servidos íntegramente por una instalación
-        for (int i1 = 0; i1 < inst.stores; ++i1) {
-            if ((int)solution.facilities_of[i1].size() != 1) continue;
-            const int j1 = solution.facilities_of[i1][0];
+    for (int client_1 = 0; client_1 < inst.stores; ++client_1) {
+      if ((int)solution.facilities_of[client_1].size() != 1) continue;
+      const int warehouse_1 = solution.facilities_of[client_1][0];
 
-            for (int i2 = i1 + 1; i2 < inst.stores; ++i2) {
-                if ((int)solution.facilities_of[i2].size() != 1) continue;
-                const int j2 = solution.facilities_of[i2][0];
-                if (j1 == j2) continue; // misma instalación, sin intercambio útil
+      for (int client_2 = client_1 + 1; client_2 < inst.stores; ++client_2) {
+        if ((int)solution.facilities_of[client_2].size() != 1) continue;
+        const int warehouse_2 = solution.facilities_of[client_2][0];
+        if (warehouse_1 == warehouse_2) continue; 
 
-                const double d1 = inst.demand[i1];
-                const double d2 = inst.demand[i2];
+        const double demand_1 = inst.demand[client_1];
+        const double demand_2 = inst.demand[client_2];
 
-                // ── Verificación de capacidad ────────────────────────────
-                // j1 pierde d1 y gana d2 → necesita residual_cap[j1] + d1 >= d2
-                if (solution.residual_cap[j1] + d1 < d2 - EPS) continue;
-                // j2 pierde d2 y gana d1 → necesita residual_cap[j2] + d2 >= d1
-                if (solution.residual_cap[j2] + d2 < d1 - EPS) continue;
+        if (solution.residual_cap[warehouse_1] + demand_1 < demand_2 - EPS) continue;
+        if (solution.residual_cap[warehouse_2] + demand_2 < demand_1 - EPS) continue;
 
-                // ── Verificación de incompatibilidades ───────────────────
-                // i1 pasa a j2: comprobar incomp_count[i1][j2]
-                //   Si i1 e i2 son incompatibles, i2 está saliendo de j2 → restar 1
-                int incompI1inJ2 = solution.incomp_count[i1][j2];
-                if (inst.is_incompat[i1][i2]) --incompI1inJ2;
-                if (incompI1inJ2 > 0) continue;
+        int incomp_client1_in_warehouse2 = solution.incomp_count[client_1][warehouse_2];
+        if (inst.is_incompat[client_1][client_2]) --incomp_client1_in_warehouse2;
+        if (incomp_client1_in_warehouse2 > 0) continue;
 
-                // i2 pasa a j1: comprobar incomp_count[i2][j1]
-                //   Si i1 e i2 son incompatibles, i1 está saliendo de j1 → restar 1
-                int incompI2inJ1 = solution.incomp_count[i2][j1];
-                if (inst.is_incompat[i1][i2]) --incompI2inJ1;
-                if (incompI2inJ1 > 0) continue;
+        int incomp_client2_in_warehouse1 = solution.incomp_count[client_2][warehouse_1];
+        if (inst.is_incompat[client_1][client_2]) --incomp_client2_in_warehouse1;
+        if (incomp_client2_in_warehouse1 > 0) continue;
 
-                // ── Variación de coste ───────────────────────────────────
-                const double delta =
-                    (inst.supply_cost[i1][j2] - inst.supply_cost[i1][j1]) * d1 +
-                    (inst.supply_cost[i2][j1] - inst.supply_cost[i2][j2]) * d2;
+        const double delta =
+            (inst.supply_cost[client_1][warehouse_2] - inst.supply_cost[client_1][warehouse_1]) * demand_1 +
+            (inst.supply_cost[client_2][warehouse_1] - inst.supply_cost[client_2][warehouse_2]) * demand_2;
 
-                if (delta < bestDelta) {
-                    bestDelta = delta;
-                    bestI1 = i1; bestI2 = i2;
-                    bestJ1 = j1; bestJ2 = j2;
-                }
-            }
+        if (delta < best_delta) {
+          best_delta = delta;
+          best_client_1 = client_1; best_client_2 = client_2;
+          best_warehouse_1 = warehouse_1; best_warehouse_2 = warehouse_2;
         }
-
-        // Aplicar el mejor intercambio encontrado
-        if (bestI1 >= 0) {
-            const double d1 = inst.demand[bestI1];
-            const double d2 = inst.demand[bestI2];
-            solution.removeAssignment(bestI1, bestJ1, d1, inst);
-            solution.removeAssignment(bestI2, bestJ2, d2, inst);
-            solution.assign(bestI1, bestJ2, d1, inst);
-            solution.assign(bestI2, bestJ1, d2, inst);
-            found_move   = true;
-            any_improved = true;
-        }
+      }
     }
 
-    return any_improved;
+    if (best_client_1 >= 0) {
+      const double demand_1 = inst.demand[best_client_1];
+      const double demand_2 = inst.demand[best_client_2];
+      solution.removeAssignment(best_client_1, best_warehouse_1, demand_1, inst);
+      solution.removeAssignment(best_client_2, best_warehouse_2, demand_2, inst);
+      solution.assign(best_client_1, best_warehouse_2, demand_1, inst);
+      solution.assign(best_client_2, best_warehouse_1, demand_2, inst);
+      found_move   = true;
+      any_improved = true;
+    }
+  }
+
+  return any_improved;
 }

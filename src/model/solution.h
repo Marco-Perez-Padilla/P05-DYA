@@ -33,11 +33,11 @@ class Solution {
   double total_cost_     = 0.0;
 
  public:
-  std::vector<bool>                open;  
+  std::vector<bool> open;  
   std::vector<std::vector<double>> demand_fraction;     
-  std::vector<std::vector<bool>>   partial_attend;
+  std::vector<std::vector<bool>> partial_attend;
 
-  std::vector<double>           residual_cap;  
+  std::vector<double> residual_cap;  
   std::vector<std::vector<int>> clients_of; 
   std::vector<std::vector<int>> facilities_of;
   std::vector<std::vector<int>> incomp_count;
@@ -54,10 +54,10 @@ class Solution {
   double getTransportCost() const {return trasnport_cost_;}
   double getTotalCost() const {return total_cost_;}
 
-  bool   isFeasible(const Instance& inst) const;
-  int    countIncompatibilityViolations(const Instance& inst) const;
+  bool isFeasible(const Instance& inst) const;
+  int countIncompatibilityViolations(const Instance& inst) const;
   double computeUnsatisfiedDemand(const Instance& inst) const;
-  int    openFacilitiesCount() const;
+  int openFacilitiesCount() const;
 
   void checkFeasibilityAfterLS(const Instance& inst, const std::string& context = "") const;
 };

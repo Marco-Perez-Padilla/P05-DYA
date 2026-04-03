@@ -51,16 +51,16 @@ bool SwapFacilities::improve(Solution& solution, const Instance& inst) {
 
       const std::vector<int> clients = solution.clients_of[jclose];
       for (int jnew = -1; jnew < inst.warehouses && !found_move; ++jnew) {
-        if (jnew >= 0 && solution.open[jnew]) continue; // solo cerradas
+        if (jnew >= 0 && solution.open[jnew]) continue; 
         if (jnew == jclose) continue;
 
         std::vector<double> sim_residual(inst.warehouses);
         for (int j = 0; j < inst.warehouses; ++j)
             sim_residual[j] = solution.residual_cap[j];
         if (jnew >= 0)
-            sim_residual[jnew] = inst.capacity[jnew]; // jnew se abre
+            sim_residual[jnew] = inst.capacity[jnew]; 
 
-        double transportDelta = 0.0;
+        double transport_delta = 0.0;
         bool   feasible       = true;
 
         std::vector<std::tuple<int,int,double>> plan;
@@ -91,19 +91,18 @@ bool SwapFacilities::improve(Solution& solution, const Instance& inst) {
           if (best_j < 0) { feasible = false; break; }
 
           sim_residual[best_j] -= q;
-          transportDelta += (inst.supply_cost[i][best_j]
-                            - inst.supply_cost[i][jclose]) * q;
+          transport_delta += (inst.supply_cost[i][best_j] - inst.supply_cost[i][jclose]) * q;
           plan.emplace_back(i, best_j, q);
         }
 
         if (!feasible) continue;
 
-        const double fixedDelta = (jnew >= 0 ? inst.fixed_cost[jnew] : 0.0) - inst.fixed_cost[jclose];
-        const double totalDelta = fixedDelta + transportDelta;
+        const double fixed_delta = (jnew >= 0 ? inst.fixed_cost[jnew] : 0.0) - inst.fixed_cost[jclose];
+        const double total_delta = fixed_delta + transport_delta;
 
         // If the total cost change is an improvement, apply the plan: 
-        // 1. Cerrar jclose y eliminar sus asignaciones, 2. Abrir jnew (si procede), 3. Crear nuevas asignaciones
-        if (totalDelta < -EPS) {
+        // 1. Close jclose and open jnew (if applicable), warehouse_2. Reassign clients according to the plan, 3. Update the solution's cost and feasibility.
+        if (total_delta < -EPS) {
           for (auto& [i, dest, q] : plan) {
             solution.removeAssignment(i, jclose, q, inst);
           }
