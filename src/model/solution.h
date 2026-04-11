@@ -10,6 +10,13 @@
 ** Fecha: 31/03/2026
 
 ** Archivo solution.h: Clase Solution para el MS-CFLP-CI
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**      11/04/2026 - Modificación para añadir métodos de verificación de factibilidad y consistencia
 **/
 
 #ifndef SOLUTION_H
@@ -55,6 +62,7 @@ class Solution {
   double getTotalCost() const {return total_cost_;}
 
   bool isFeasible(const Instance& inst) const;
+  void checkConsistency(const Instance& inst) const;
   int countIncompatibilityViolations(const Instance& inst) const;
   double computeUnsatisfiedDemand(const Instance& inst) const;
   int openFacilitiesCount() const;

@@ -10,11 +10,19 @@
 ** Fecha: 31/03/2026
 
 ** Archivo solution.cc: Implementación de la clase Solution
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**      11/04/2026 - Modificación para añadir métodos de verificación de factibilidad y consistencia
 **/
 
 #include "solution.h"
 #include <algorithm>
 #include <numeric>
+#include <sstream>
 
 /**
  * @brief Creates an empty solution with all data structures initialized but no facilities open and no demand assigned.
@@ -132,6 +140,148 @@ bool Solution::isFeasible(const Instance& inst) const {
 }
 
 /**
+ * @brief Verifies the internal consistency of the solution by recalculating costs, residual capacities, and auxiliary structures from the demand fractions and comparing them to the stored values.
+ * If any inconsistency is found, an InfeasibleSolutionException is thrown with a descriptive
+ * @param inst Instance of the problem, used to recalculate costs and capacities.
+ * @throws InfeasibleSolutionException if any inconsistency is detected in the solution's internal data structures or cost calculations, with a message describing the specific inconsistency.
+ */
+void Solution::checkConsistency(const Instance& inst) const {
+  const int warehouse = inst.warehouses;
+  const int client = inst.stores;
+
+  double recalc_fixed = 0.0;
+  for (int j = 0; j < warehouse; ++j) {
+    if (open[j]) recalc_fixed += inst.fixed_cost[j];
+  }
+  if (std::abs(recalc_fixed - fixed_cost_) > EPS) {
+    std::ostringstream oss;
+    oss << "Inconsistencia en coste fijo: almacenado=" << fixed_cost_
+        << ", recalculado=" << recalc_fixed;
+    throw InfeasibleSolutionException(oss.str());
+  }
+
+  double recalc_transport = 0.0;
+  for (int i = 0; i < client; ++i) {
+    for (int j = 0; j < warehouse; ++j) {
+      double q = demand_fraction[i][j] * inst.demand[i];
+      recalc_transport += q * inst.supply_cost[i][j];
+    }
+  }
+  if (std::abs(recalc_transport - trasnport_cost_) > EPS) {
+    std::ostringstream oss;
+    oss << "Inconsistencia en coste de transporte: almacenado=" << trasnport_cost_
+        << ", recalculado=" << recalc_transport;
+    throw InfeasibleSolutionException(oss.str());
+  }
+
+  double recalc_total = recalc_fixed + recalc_transport;
+  if (std::abs(recalc_total - total_cost_) > EPS) {
+    std::ostringstream oss;
+    oss << "Inconsistencia en coste total: almacenado=" << total_cost_
+        << ", recalculado=" << recalc_total;
+    throw InfeasibleSolutionException(oss.str());
+  }
+
+  for (int j = 0; j < warehouse; ++j) {
+    double used = 0.0;
+    for (int i = 0; i < client; ++i) {
+      used += demand_fraction[i][j] * inst.demand[i];
+    }
+    double expected_residual = open[j] ? (inst.capacity[j] - used) : 0.0;
+    if (std::abs(expected_residual - residual_cap[j]) > EPS) {
+      std::ostringstream oss;
+      oss << "Inconsistencia en capacidad residual de instalacion " << j
+          << ": almacenada=" << residual_cap[j]
+          << ", esperada=" << expected_residual;
+      throw InfeasibleSolutionException(oss.str());
+    }
+  }
+
+  for (int i = 0; i < client; ++i) {
+    for (int j = 0; j < warehouse; ++j) {
+      bool expected_attend = (demand_fraction[i][j] > EPS);
+      if (partial_attend[i][j] != expected_attend) {
+        std::ostringstream oss;
+        oss << "Inconsistencia en partial_attend[" << i << "][" << j
+            << "]: almacenado=" << partial_attend[i][j]
+            << ", esperado=" << expected_attend;
+        throw InfeasibleSolutionException(oss.str());
+      }
+    }
+  }
+
+  std::vector<std::vector<int>> recalc_clients_of(warehouse);
+  for (int j = 0; j < warehouse; ++j) {
+    for (int i = 0; i < client; ++i) {
+      if (demand_fraction[i][j] > EPS) {
+        recalc_clients_of[j].push_back(i);
+      }
+    }
+    auto& stored = clients_of[j];
+    auto& recalc = recalc_clients_of[j];
+    if (stored.size() != recalc.size()) {
+      std::ostringstream oss;
+      oss << "Inconsistencia en clients_of[" << j << "]: tamaños distintos";
+      throw InfeasibleSolutionException(oss.str());
+    }
+    for (int i : stored) {
+      if (std::find(recalc.begin(), recalc.end(), i) == recalc.end()) {
+        std::ostringstream oss;
+        oss << "Inconsistencia en clients_of[" << j << "]: cliente " << i
+            << " presente pero no debería";
+        throw InfeasibleSolutionException(oss.str());
+      }
+    }
+  }
+
+  std::vector<std::vector<int>> recalc_facilities_of(client);
+  for (int i = 0; i < client; ++i) {
+    for (int j = 0; j < warehouse; ++j) {
+      if (demand_fraction[i][j] > EPS) {
+        recalc_facilities_of[i].push_back(j);
+      }
+    }
+    auto& stored = facilities_of[i];
+    auto& recalc = recalc_facilities_of[i];
+    if (stored.size() != recalc.size()) {
+      std::ostringstream oss;
+      oss << "Inconsistencia en facilities_of[" << i << "]: tamaños distintos";
+      throw InfeasibleSolutionException(oss.str());
+    }
+    for (int j : stored) {
+      if (std::find(recalc.begin(), recalc.end(), j) == recalc.end()) {
+        std::ostringstream oss;
+        oss << "Inconsistencia en facilities_of[" << i << "]: instalacion " << j
+            << " presente pero no debería";
+        throw InfeasibleSolutionException(oss.str());
+      }
+    }
+  }
+
+  std::vector<std::vector<int>> recalc_incomp(client, std::vector<int>(warehouse, 0));
+  for (int j = 0; j < warehouse; ++j) {
+    for (int i = 0; i < client; ++i) {
+      if (demand_fraction[i][j] > EPS) {
+        for (int ip : inst.incomp_neighbors[i]) {
+          recalc_incomp[ip][j]++;
+        }
+      }
+    }
+  }
+  for (int i = 0; i < client; ++i) {
+    for (int j = 0; j < warehouse; ++j) {
+      if (incomp_count[i][j] != recalc_incomp[i][j]) {
+        std::ostringstream oss;
+        oss << "Inconsistencia en incomp_count[" << i << "][" << j
+            << "]: almacenado=" << incomp_count[i][j]
+            << ", recalculado=" << recalc_incomp[i][j];
+        throw InfeasibleSolutionException(oss.str());
+      }
+    }
+  }
+}
+
+/**
  * @brief Counts the number of incompatibility violations in the solution by checking all pairs of incompatible clients and their assigned facilities.
  * @param inst The instance providing the list of incompatible pairs and their assigned facilities.
  * @return The total number of incompatibility violations in the solution.
@@ -176,6 +326,7 @@ int Solution::openFacilitiesCount() const {
  * @throws InfeasibleSolutionException if the solution is infeasible, with details about the number of incompatibility violations and
  */
 void Solution::checkFeasibilityAfterLS(const Instance& inst, const std::string& context) const {
+  checkConsistency(inst);
   if (!isFeasible(inst)) {
     const int    violations  = countIncompatibilityViolations(inst);
     const double unsatisfied = computeUnsatisfiedDemand(inst);

@@ -91,3 +91,71 @@ Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incom
 wlp01.dzn [voraz]              34      16980.00      20064.00      37044.00        0     0.0025
 wlp01.dzn [voraz+LS]           29      14740.00      19283.00      34023.00        0     0.1950
 wlp01.dzn [GRASP α=3 i=100]     27      14560.00      18012.00      32572.00        0    22.0554
+
+/////////////////////////
+
+
+Instancia : wlp01.dzn
+Instalaciones (warehouses): 50   Clientes (stores): 115   Incompatibilidades: 383
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp01.dzn [voraz]              34      16980.00      20064.00      37044.00        0     0.0025
+wlp01.dzn [voraz+LS]           29      14740.00      19283.00      34023.00        0     0.1947
+wlp01.dzn [GRASP α=3 i=100]     35      17830.00      23997.00      41827.00        0     0.2589
+wlp01.dzn [GRASP α=3 i=100 +LS]     29      14460.00      17728.00      32188.00        0    21.8017
+
+------------------------------------------------------------
+Instancia : wlp02.dzn
+Instalaciones (warehouses): 100   Clientes (stores): 253   Incompatibilidades: 1718
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp02.dzn [voraz]              66      34590.00      36102.00      70692.00        0     0.0101
+wlp02.dzn [voraz+LS]           61      32100.00      33846.00      65946.00        0     1.3632
+wlp02.dzn [GRASP α=3 i=100]     66      34590.00      42643.00      77233.00        0     1.0457
+wlp02.dzn [GRASP α=3 i=100 +LS]     58      32150.00      31199.00      63349.00        0   212.0964
+
+------------------------------------------------------------
+Instancia : wlp03.dzn
+Instalaciones (warehouses): 150   Clientes (stores): 345   Incompatibilidades: 3447
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp03.dzn [voraz]              93      46400.00      40383.00      86783.00        0     0.0199
+wlp03.dzn [voraz+LS]           83      41880.00      36436.00      78316.00        0     7.7641
+wlp03.dzn [GRASP α=3 i=100]     93      46400.00      48459.00      94859.00        0     2.0275
+
+////////////////////////////////////
+
+
+Instancia : wlp01.dzn
+Instalaciones (warehouses): 50   Clientes (stores): 115   Incompatibilidades: 383
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp01.dzn [voraz]              34      16980.00      20064.00      37044.00        0     0.0024
+wlp01.dzn [voraz+LS]           28      14150.00      20404.00      34554.00        0     0.1342
+wlp01.dzn [GRASP α=3 i=100]     35      17830.00      24119.00      41949.00        0     0.2620
+wlp01.dzn [GRASP α=3 i=100 +LS]     28      15070.00      16172.00      31242.00        0    23.4190
+
+------------------------------------------------------------
+Instancia : wlp02.dzn
+Instalaciones (warehouses): 100   Clientes (stores): 253   Incompatibilidades: 1718
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp02.dzn [voraz]              66      34590.00      36102.00      70692.00        0     0.0102
+wlp02.dzn [voraz+LS]           61      32020.00      32967.00      64987.00        0     1.9241
+wlp02.dzn [GRASP α=3 i=100]     66      34590.00      42819.00      77409.00        0     1.0416
+wlp02.dzn [GRASP α=3 i=100 +LS]     56      31180.00      31015.00      62195.00        0   256.3352
+
+------------------------------------------------------------
+Instancia : wlp03.dzn
+Instalaciones (warehouses): 150   Clientes (stores): 345   Incompatibilidades: 3447
+
+Algoritmo/Instancia       |Jopen|C.Fijo        C.Asignacion  C.Total       Incomp.  CPU(s)     
+-------------------------------------------------------------------------------------------------
+wlp03.dzn [voraz]              93      46400.00      40383.00      86783.00        0     0.0195
+wlp03.dzn [voraz+LS]           83      42640.00      34199.00      76839.00        0     6.1240
+wlp03.dzn [GRASP α=3 i=100]     92      45640.00      48969.00      94609.00        0     1.9909

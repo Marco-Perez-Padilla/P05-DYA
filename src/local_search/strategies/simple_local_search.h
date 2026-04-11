@@ -16,6 +16,7 @@
 
 ** Historial de revisiones:
 **      31/03/2026 - Creacion (primera version) del codigo
+**      11/04/2026 - Modificación para añadir setOrder
 **/
 
 #ifndef SIMPLE_LOCAL_SEARCH_H
@@ -37,6 +38,7 @@ class SimpleLocalSearch : public LocalSearch {
   SimpleLocalSearch(std::vector<std::shared_ptr<LocalSearch>> operators) : operators_(std::move(operators)) {}
   bool improve(Solution& solution, const Instance& inst) override;
   std::string name() const override { return "SimpleLocalSearch"; }
+  void setOrder(const std::vector<int>& order);
 };
 
 #endif

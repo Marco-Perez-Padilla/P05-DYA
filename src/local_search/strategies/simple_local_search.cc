@@ -16,6 +16,7 @@
 
 ** Historial de revisiones:
 **      31/03/2026 - Creacion (primera version) del codigo
+**      11/04/2026 - Modificación para añadir setOrder
 **/
 
 #include "simple_local_search.h"
@@ -41,4 +42,21 @@ bool SimpleLocalSearch::improve(Solution& solution, const Instance& inst) {
   }
 
   return any_improved;
+}
+
+/**
+ * @brief Allows setting a custom order of local search operators to be applied in the improve method. The order is defined by a vector of indices corresponding to the operators in the original list.
+ * @param order A vector of integers representing the new order of operators. Each integer should be
+ */
+void SimpleLocalSearch::setOrder(const std::vector<int>& order) {
+  if (order.size() != operators_.size()) return;
+  std::vector<std::shared_ptr<LocalSearch>> reordered;
+  for (int idx : order) {
+    if (idx >= 0 && idx < static_cast<int>(operators_.size())) {
+      reordered.push_back(operators_[idx]);
+    }
+  }
+  if (reordered.size() == operators_.size()) {
+    operators_ = std::move(reordered);
+  }
 }

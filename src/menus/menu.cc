@@ -10,6 +10,13 @@
 ** Fecha: 31/03/2026
 
 ** Archivo menu.cc: Implementación de la clase Menu
+**
+** Referencias:
+**      Enlaces de interes
+
+** Historial de revisiones:
+**      31/03/2026 - Creacion (primera version) del codigo
+**      11/04/2026 - Modificación para añadir opciones de estrategias
 **/
 
 #include "menu.h"
@@ -20,6 +27,8 @@
 #include "../local_search/operators/shifts/shifts.h"
 #include "../local_search/operators/swap_clients/swap_clients.h"
 #include "../local_search/operators/swap_facilities/swap_facilities.h"
+#include "../local_search/strategies/rvnd.h"
+#include "../local_search/operators/incomp_elimination/incomp_elimination.h"
 #include "../help/help_functions.h"
 #include "../exceptions/exceptions.h"
 
@@ -28,6 +37,26 @@
 #include <algorithm>
 #include <sstream>
 #include <limits>
+
+/**
+ * @brief Constructor of the Menu class that initializes the instance path, name, loads the instance data, and sets up the local search operators.
+ * @param instance_path The file path to the instance data.
+ * @param config The RunConfig containing the user's algorithm and instance selections.
+ */
+Menu::Menu(const std::string& instance_path, const RunConfig& config)
+    : instance_path_(instance_path),
+      instance_name_(std::filesystem::path(instance_path).filename().string()),
+      inst_(InstanceReader::read(instance_path)),
+      config_(config) {
+
+  local_seach_ops_.clear();
+  if (config_.use_operators.size() >= 4) {
+    if (config_.use_operators[0]) local_seach_ops_.push_back(std::make_shared<Shifts>());
+    if (config_.use_operators[1]) local_seach_ops_.push_back(std::make_shared<SwapClients>());
+    if (config_.use_operators[2]) local_seach_ops_.push_back(std::make_shared<SwapFacilities>());
+    if (config_.use_operators[3]) local_seach_ops_.push_back(std::make_shared<IncompElimination>());
+  }
+}
 
 /**
  * @brief Launches the interactive menu for selecting data directory, algorithms, and instances, and then executes the selected algorithms on the chosen instances with timing and result reporting.
@@ -76,42 +105,56 @@ RunConfig Menu::askAlgorithmMenu() {
   RunConfig config;
   std::string line;
   int op = 0;
+  
   while (op < 1 || op > 3) {
-    std::cout << "\n=== MENÚ DE ALGORITMOS ===\n"
-              << "  [1] Solo Voraz  (Greedy + LS)\n"
-              << "  [2] Solo GRASP  (GRASP  + LS)\n"
+    std::cout << "\n=== MENÚ DE ALGORITMOS CONSTRUCTIVOS ===\n"
+              << "  [1] Solo Voraz\n"
+              << "  [2] Solo GRASP\n"
               << "  [3] Ambos\n"
               << "Opción [3]: ";
 
     op = 3;
     if (std::getline(std::cin, line) && !line.empty())
-      try { 
-        op = std::stoi(line); 
-      } catch (...) {
-        op = 0;
-      }
+      try { op = std::stoi(line); } catch (...) { op = 0; }
 
-    if (op < 1 || op > 3) {
+    if (op < 1 || op > 3)
       std::cout << "  Opción no válida. Introduce 1, 2 o 3.\n";
-    }
   }
   config.run_greedy = (op == 1 || op == 3);
   config.run_GRASP  = (op == 2 || op == 3);
 
+  if (config.run_greedy) {
+    config.greedy_ls_mode = askLSMode("Voraz");
+  }
+
   if (config.run_GRASP) {
+    config.grasp_ls_mode = askLSMode("GRASP");
+
     std::cout << "\n  Tamaño LRC alpha [3]: ";
     if (std::getline(std::cin, line) && !line.empty()) {
-      try { 
-        config.grasp_alpha = std::stoi(line); 
-      } catch (...) {}
+      try { config.grasp_alpha = std::stoi(line); } catch (...) {}
     }
 
     std::cout << "  Iteraciones GRASP [100]: ";
     if (std::getline(std::cin, line) && !line.empty()) {
-      try { 
-        config.grasp_iters = std::stoi(line); 
-      } catch (...) {}
+      try { config.grasp_iters = std::stoi(line); } catch (...) {}
     }
+  }
+
+  // Determinar si se necesita configurar búsqueda local
+  bool need_ls_config = false;
+  if (config.run_greedy && (config.greedy_ls_mode == LSMode::ONLY_LS || config.greedy_ls_mode == LSMode::BOTH))
+    need_ls_config = true;
+  if (config.run_GRASP && (config.grasp_ls_mode == LSMode::ONLY_LS || config.grasp_ls_mode == LSMode::BOTH))
+    need_ls_config = true;
+
+  if (need_ls_config) {
+    askLocalSearchMenu(config);
+  } else {
+    // Inicializar use_operators con 4 false para evitar segmentation fault en constructor
+    config.use_operators.assign(4, false);
+    config.use_rvnd = false;
+    config.rvnd_order.clear();
   }
 
   return config;
@@ -147,16 +190,6 @@ void Menu::askInstanceMenu(RunConfig& config, const std::vector<std::string>& pa
 }
 
 /**
- * @brief Constructor of the Menu class that initializes the instance path, name, loads the instance data, and sets up the local search operators.
- * @param instance_path The file path to the instance data.
- * @param config The RunConfig containing the user's algorithm and instance selections.
- */
-Menu::Menu(const std::string& instance_path, const RunConfig& config) : instance_path_(instance_path), instance_name_(std::filesystem::path(instance_path).filename().string()),
-                                                                       inst_(InstanceReader::read(instance_path)), config_(config) {                                                                     
-  local_seach_ops_ = {std::make_shared<Shifts>(),std::make_shared<SwapClients>(),std::make_shared<SwapFacilities>()};
-}
-
-/**
  * @brief Executes the selected algorithms on the loaded instance, applying local search and printing results with timing. It runs the Greedy algorithm if selected, followed by GRASP if selected, and applies local search to each solution before reporting.
  * The results include the instance name, algorithm label, solution cost, and execution time. If any algorithm produces an infeasible solution after local search, an exception is thrown with details about the infe
  */
@@ -180,12 +213,16 @@ void Menu::run() {
  * @param solution The Solution object to improve using local search.
  */
 void Menu::applyLocalSearches(Solution& solution) const {
-  bool improved = true;
-  while (improved) {
-    improved = false;
-    for (auto& op : local_seach_ops_) {
-      if (op->improve(solution, inst_)) improved = true;
-    }
+  if (local_seach_ops_.empty()) return;
+
+  if (config_.use_rvnd) {
+    RVND rvnd(local_seach_ops_);
+    if (!config_.rvnd_order.empty()) rvnd.setOrder(config_.rvnd_order);
+    rvnd.improve(solution, inst_);
+  } else {
+    SimpleLocalSearch sls(local_seach_ops_);
+    if (!config_.rvnd_order.empty()) sls.setOrder(config_.rvnd_order);
+    sls.improve(solution, inst_);
   }
   solution.checkFeasibilityAfterLS(inst_, "applyLocalSearches");
 }
@@ -197,11 +234,20 @@ void Menu::runGreedyAlgo() {
   GreedyConstructive greedy;
   Timer time;
   Solution solution = greedy.build(inst_);
-  printSolutionRow(instance_name_ + " [voraz]", solution, inst_, time.elapsedSeconds());
+  std::string label = instance_name_ + " [voraz]";
 
-  time.reset();
-  applyLocalSearches(solution);
-  printSolutionRow(instance_name_ + " [voraz+LS]", solution, inst_, time.elapsedSeconds());
+  bool show_without_ls = (config_.greedy_ls_mode == LSMode::NONE || config_.greedy_ls_mode == LSMode::BOTH);
+  bool show_with_ls    = (config_.greedy_ls_mode == LSMode::ONLY_LS || config_.greedy_ls_mode == LSMode::BOTH);
+
+  if (show_without_ls) {
+    printSolutionRow(label, solution, inst_, time.elapsedSeconds());
+  }
+
+  if (show_with_ls) {
+    time.reset();
+    applyLocalSearches(solution);
+    printSolutionRow(instance_name_ + " [voraz+LS]", solution, inst_, time.elapsedSeconds());
+  }
 }
 
 /**
@@ -210,24 +256,46 @@ void Menu::runGreedyAlgo() {
  */
 void Menu::runGRASPAlgo() {
   GRASPConstructive grasp(config_.grasp_alpha);
-  Solution best_solution;
-  double   best_cost = std::numeric_limits<double>::max();
+  
+  bool show_without_ls = (config_.grasp_ls_mode == LSMode::NONE || config_.grasp_ls_mode == LSMode::BOTH);
+  bool show_with_ls    = (config_.grasp_ls_mode == LSMode::ONLY_LS || config_.grasp_ls_mode == LSMode::BOTH);
 
-  Timer time;
-  for (int iter = 0; iter < config_.grasp_iters; ++iter) {
-    grasp.reseed();
-    Solution solution = grasp.build(inst_);
-    applyLocalSearches(solution);
-    if (solution.getTotalCost() < best_cost) {
-      best_cost = solution.getTotalCost();
-      best_solution  = solution;
+  if (show_without_ls) {
+    Solution best_without;
+    double best_cost_without = std::numeric_limits<double>::max();
+    Timer time_without;
+    for (int iter = 0; iter < config_.grasp_iters; ++iter) {
+      grasp.reseed();
+      Solution solution = grasp.build(inst_);
+      if (solution.getTotalCost() < best_cost_without) {
+        best_cost_without = solution.getTotalCost();
+        best_without = solution;
+      }
     }
+    std::string label = instance_name_
+        + " [GRASP α=" + std::to_string(config_.grasp_alpha)
+        + " i=" + std::to_string(config_.grasp_iters) + "]";
+    printSolutionRow(label, best_without, inst_, time_without.elapsedSeconds());
   }
 
-  const std::string label = instance_name_
-      + " [GRASP α=" + std::to_string(config_.grasp_alpha)
-      + " i="        + std::to_string(config_.grasp_iters) + "]";
-  printSolutionRow(label, best_solution, inst_, time.elapsedSeconds());
+  if (show_with_ls) {
+    Solution best_with;
+    double best_cost_with = std::numeric_limits<double>::max();
+    Timer time_with;
+    for (int iter = 0; iter < config_.grasp_iters; ++iter) {
+      grasp.reseed();
+      Solution solution = grasp.build(inst_);
+      applyLocalSearches(solution); 
+      if (solution.getTotalCost() < best_cost_with) {
+        best_cost_with = solution.getTotalCost();
+        best_with = solution;
+      }
+    }
+    std::string label = instance_name_
+        + " [GRASP α=" + std::to_string(config_.grasp_alpha)
+        + " i=" + std::to_string(config_.grasp_iters) + " +LS]";
+    printSolutionRow(label, best_with, inst_, time_with.elapsedSeconds());
+  }
 }
 
 /**
@@ -302,4 +370,122 @@ std::vector<int> Menu::parseSelection(const std::string& input, int total) {
   std::sort(selected.begin(), selected.end());
   selected.erase(std::unique(selected.begin(), selected.end()), selected.end());
   return selected;
+}
+
+/**
+ * @brief Asks the user to select the local search mode for a given algorithm (None, Only LS, or Both) and returns the corresponding LSMode enum value based on the user's choice. The default option is "Only LS".
+ * @param algorithmName The name of the algorithm for which the local search mode is being configured
+ * @return The selected LSMode enum value representing the local search mode for the algorithm.
+ */
+LSMode Menu::askLSMode(const std::string& algorithmName) {
+  std::cout << "\nModo de búsqueda local para " << algorithmName << ":\n"
+            << "  [1] Sin búsqueda local (solo constructivo)\n"
+            << "  [2] Con búsqueda local\n"
+            << "  [3] Ambos (mostrar sin y con LS)\n"
+            << "Opción [2]: ";
+  std::string line;
+  int choice = 2;
+  if (std::getline(std::cin, line) && !line.empty()) {
+    try { choice = std::stoi(line); } catch (...) { choice = 2; }
+  }
+  if (choice == 1) return LSMode::NONE;
+  if (choice == 3) return LSMode::BOTH;
+  return LSMode::ONLY_LS;  // default 2
+}
+
+/**
+ * @brief Displays a menu for configuring local search options, including the choice between VND and RVND strategies, which operators to include, and the order of neighborhoods. The user's selections are stored in the provided RunConfig struct.
+ * The menu allows the user to enable or disable each of the four local search operators (Shift, SwapClients, SwapFacilities, IncompElimination) and to specify the order in which they should be applied. If RVND is selected, the order will be used as the initial order and then randomized in each iteration.
+ * If no operators are selected, the local search configuration will be effectively disabled.
+ * @param config The RunConfig struct to update with the user's local search configuration selections.
+ */
+void Menu::askLocalSearchMenu(RunConfig& config) {
+  std::string line;
+
+  std::cout << "\n=== ESTRATEGIA DE BÚSQUEDA LOCAL ===\n"
+            << "  [1] VND (orden fijo de vecindades)\n"
+            << "  [2] RVND (orden aleatorio en cada iteración)\n"
+            << "Opción [1]: ";
+  int ls_choice = 1;
+  if (std::getline(std::cin, line) && !line.empty()) {
+    try { ls_choice = std::stoi(line); } catch (...) {}
+  }
+  config.use_rvnd = (ls_choice == 2);
+
+  std::cout << "\nSeleccione los operadores a incluir (1=Sí, 0=No):\n";
+  config.use_operators.resize(4, true);
+  const std::vector<std::string> op_names = {
+    "Shift", "SwapClientes", "SwapInstalaciones", "EliminacionIncomp"
+  };
+  for (size_t i = 0; i < op_names.size(); ++i) {
+    std::cout << "  Incluir " << op_names[i] << "? [1]: ";
+    std::string ans;
+    if (std::getline(std::cin, ans) && !ans.empty()) {
+      try { config.use_operators[i] = (std::stoi(ans) != 0); } catch (...) {}
+    }
+  }
+
+  int num_selected = std::count(config.use_operators.begin(), config.use_operators.end(), true);
+  if (num_selected > 0) {
+    std::cout << "\nOrden de vecindades (números 1-4 separados por espacios):\n"
+              << "  1:Shift  2:SwapClientes  3:SwapInstalaciones  4:EliminacionIncomp\n";
+    if (config.use_rvnd) {
+      std::cout << "Nota: En RVND este orden se usará como inicial y luego se barajará aleatoriamente.\n";
+    }
+    std::cout << "Orden [";
+    bool first = true;
+    for (int i = 0; i < 4; ++i) {
+      if (config.use_operators[i]) {
+        if (!first) std::cout << " ";
+        std::cout << (i+1);
+        first = false;
+      }
+    }
+    std::cout << "]: ";
+
+    std::string order_line;
+    bool valid_order = false;
+    while (!valid_order) {
+      if (!std::getline(std::cin, order_line)) break; // EOF
+      std::stringstream ss(order_line);
+      int idx;
+      std::vector<int> temp_order;
+      bool invalid_input = false;
+      while (ss >> idx) {
+        if (idx < 1 || idx > 4 || !config.use_operators[idx-1]) {
+          invalid_input = true;
+          break;
+        }
+        if (std::find(temp_order.begin(), temp_order.end(), idx-1) != temp_order.end()) {
+          invalid_input = true;
+          break;
+        }
+        temp_order.push_back(idx-1);
+      }
+      if (!invalid_input && (int)temp_order.size() == num_selected) {
+        config.rvnd_order = std::move(temp_order);
+        valid_order = true;
+      } else {
+        std::cout << "  Orden inválido. Debe contener exactamente los números de los operadores seleccionados (";
+        first = true;
+        for (int i = 0; i < 4; ++i) {
+          if (config.use_operators[i]) {
+            if (!first) std::cout << ", ";
+            std::cout << (i+1);
+            first = false;
+          }
+        }
+        std::cout << ") sin repeticiones.\n";
+        std::cout << "  Inténtelo de nuevo: ";
+      }
+    }
+    if (!valid_order) {
+      config.rvnd_order.clear();
+      for (int i = 0; i < 4; ++i)
+        if (config.use_operators[i]) config.rvnd_order.push_back(i);
+      std::cout << "\n  Usando orden por defecto.\n";
+    }
+  } else {
+    config.rvnd_order.clear();
+  }
 }
