@@ -21,7 +21,7 @@
 #ifndef RVND_H
 #define RVND_H
 
-#include "../local_search.h"
+#include "../../local_search.h"
 #include <vector>
 #include <memory>
 #include <random>

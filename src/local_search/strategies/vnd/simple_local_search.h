@@ -22,7 +22,7 @@
 #ifndef SIMPLE_LOCAL_SEARCH_H
 #define SIMPLE_LOCAL_SEARCH_H
 
-#include "../local_search.h"
+#include "../../local_search.h"
 #include <vector>
 #include <memory>
 

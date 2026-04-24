@@ -16,10 +16,11 @@
 
 ** Historial de revisiones:
 **      31/03/2026 - Creacion (primera version) del codigo
+**      24/04/2056 - Version final entregable
 **/
 
 #include "help/help_functions.h"
-#include "menus/menu.h"
+#include "ui/menu_coordinator.h"
 #include "exceptions/exceptions.h"
 #include <iostream>
 
@@ -29,7 +30,7 @@ int main(int argc, char* argv[]) {
   if (validation != -1) return 1; 
 
   try {
-    Menu::launch();
+    ui_launchApplication();
   } catch (const Exceptions& error) {
     std::cerr << "[Error] " << error.what() << "\n";
     return 1;
