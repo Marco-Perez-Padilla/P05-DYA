@@ -30,7 +30,7 @@
  * @param kmax The maximum neighborhood level to be used in the shaking phase of the GVNS algorithm.
  * @param maxIter The maximum number of iterations to perform in the GVNS algorithm.
  */
-GVNS::GVNS(std::shared_ptr<Constructive> constructive, std::shared_ptr<LocalSearch> improvement, int kmax, int maxIter)
+GVNS::GVNS(std::shared_ptr<Constructive> constructive, std::shared_ptr<LocalSearch> improvement, double kmax, int maxIter)
           : constructive_(constructive), improvement_(improvement), kmax_(kmax), maxIter_(maxIter), rng_(std::random_device{}()) {}
 
 /**
@@ -40,6 +40,11 @@ GVNS::GVNS(std::shared_ptr<Constructive> constructive, std::shared_ptr<LocalSear
  * @return The best solution found by the GVNS algorithm for the given instance.
  */
 Solution GVNS::run(const Instance& inst) {
+  double actual_kmax = kmax_;
+  if (use_percent_kmax_) {
+    actual_kmax = std::max(1.0, (double)(percent_kmax_ / 100.0 * inst.stores));
+  }
+
   Solution best = constructive_->build(inst);
   improvement_->improve(best, inst);
   double bestCost = best.getTotalCost();
@@ -47,7 +52,7 @@ Solution GVNS::run(const Instance& inst) {
   int iterWithoutImprove = 0;
   for (int it = 0; it < maxIter_ && iterWithoutImprove < 50; ++it) {
     int k = 1;
-    while (k <= kmax_) {
+    while (k <= (int)actual_kmax) {
       Solution candidate = best;
       shake(candidate, k, inst);
       improvement_->improve(candidate, inst);

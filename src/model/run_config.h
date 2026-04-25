@@ -57,7 +57,8 @@ struct RunConfig {
     double rl_max_delta = 1.0;
     
     // Parámetros GVNS
-    int    gvns_kmax      = 3;
+    bool   gvns_kmax_percent = false;
+    double gvns_kmax_value   = 3.0;
     int    gvns_iter      = 100;
     bool   gvns_use_rl    = false;  // si true, la mejora interna es VND-RL
     double gvns_alpha_rl  = 0.1;

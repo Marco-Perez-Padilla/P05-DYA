@@ -30,7 +30,7 @@
 
 class GVNS {
  public:
-  GVNS(std::shared_ptr<Constructive> constructive, std::shared_ptr<LocalSearch> improvement, int kmax, int maxIter);
+  GVNS(std::shared_ptr<Constructive> constructive, std::shared_ptr<LocalSearch> improvement, double kmax, int maxIter);
   Solution run(const Instance& inst);
   void setSeed(unsigned seed) { rng_.seed(seed); }
 
@@ -38,8 +38,10 @@ class GVNS {
   void shake(Solution& solution, int k, const Instance& inst);
   std::shared_ptr<Constructive> constructive_;
   std::shared_ptr<LocalSearch> improvement_;
-  int kmax_;
+  double kmax_;
   int maxIter_;
+  bool use_percent_kmax_;
+  double percent_kmax_;
   std::mt19937 rng_;
 };
 

@@ -29,7 +29,12 @@
  */
 void ui_configureGVNS(RunConfig& config) {
   std::cout << "\n=== CONFIGURACIÓN GVNS ===\n";
-  config.gvns_kmax = ui_askInt("kmax (nivel máximo de perturbación) [3]: ", 3);
+  config.gvns_kmax_percent = ui_askYesNo("¿Expresar kmax como porcentaje del número de clientes?", false);
+  if (config.gvns_kmax_percent) {
+    config.gvns_kmax_value = ui_askDouble("kmax (% del número de clientes) [10.0]: ", 10.0);
+  } else {
+    config.gvns_kmax_value = ui_askDouble("kmax (nivel máximo de perturbación) [3]: ", 3);
+  }
   config.gvns_iter = ui_askInt("Iteraciones máximas del GVNS [100]: ", 100);
   const char* strategy = config.use_rl ? "VND-RL" : (config.use_rvnd ? "RVND" : "VND");
   std::cout << "La mejora local usará la estrategia seleccionada previamente: " << strategy << ".\n";

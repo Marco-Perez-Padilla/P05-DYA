@@ -223,7 +223,8 @@ static void dumpConfigToFile(const RunConfig& config) {
   out << "\n";
 
   if (config.run_GVNS) {
-    out << "GVNS kmax=" << config.gvns_kmax
+    out << "GVNS kmax=" << config.gvns_kmax_value
+        << (config.gvns_kmax_percent ? "%" : "")
         << " iter=" << config.gvns_iter
         << "\n";
   }
@@ -364,7 +365,11 @@ void ui_launchApplication() {
           for (int it = 0; it < config.gvns_iter; ++it) {
             GreedyConstructive greedy;
             Solution solution = greedy.build(inst);
-            GVNS gvns(std::make_shared<GreedyConstructive>(), strategy, config.gvns_kmax, 10);
+            int actual_kmax = config.gvns_kmax_value;
+            if (config.gvns_kmax_percent) {
+              actual_kmax = std::max(1, (int)(config.gvns_kmax_value / 100.0 * inst.stores));
+            }
+            GVNS gvns(std::make_shared<GreedyConstructive>(), strategy, actual_kmax, 10);
             gvns.setSeed(it + 12345);
             solution = gvns.run(inst);
             if (solution.getTotalCost() < bestCost) {
@@ -372,8 +377,14 @@ void ui_launchApplication() {
               best = solution;
             }
           }
+          std::string kmaxLabel;
+          if (config.gvns_kmax_percent) {
+              kmaxLabel = std::to_string(config.gvns_kmax_value) + "%";
+          } else {
+              kmaxLabel = std::to_string(config.gvns_kmax_value);
+          }
           std::string rlTag = config.use_rl ? " RL" : "";
-          std::string label = instName + " [GVNS kmax=" + std::to_string(config.gvns_kmax)
+          std::string label = instName + " [GVNS kmax=" + kmaxLabel
                               + " i=" + std::to_string(config.gvns_iter) + rlTag + "]";
           printSolutionRow(label, best, inst, t.elapsedSeconds());
           writeResultsToFile(config.output_results_file,
