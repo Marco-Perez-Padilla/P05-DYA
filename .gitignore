@@ -36,3 +36,6 @@
 build/
 bin/
 data/input/Public/wlp20.dzn
+cte-500
+cte_500.txt
+cfg_cte_500.txt
