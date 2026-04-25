@@ -41,8 +41,43 @@ void Help() {
  */
 void Usage() {
   std::cout
-    << "Uso: ./ms_cflp_ci\n"
-    << "     ./ms_cflp_ci --help\n";
+    << "MS-CFLP-CI — Multi-Source Capacitated Facility Location Problem\n"
+    << "            with Customer Incompatibilities\n\n"
+    << "Resuelve el problema MS-CFLP-CI mediante algoritmos constructivos\n"
+    << "(voraz y GRASP) y metaheurísticas de búsqueda local (GVNS).\n"
+    << "Incluye VND con Reinforcement Learning (VND-RL) para la selección\n"
+    << "dinámica de vecindades.\n\n"
+    << "Algoritmos implementados:\n"
+    << "  - Greedy Constructive (Voraz)\n"
+    << "  - GRASP (Greedy Randomized Adaptive Search Procedure)\n"
+    << "  - GVNS (General Variable Neighborhood Search)\n"
+    << "    · Mejora: VND simple, RVND o VND-RL (configurable)\n\n"
+    << "Búsquedas locales disponibles:\n"
+    << "  - Shift (reinserción de cliente)\n"
+    << "  - Swap Clientes (intercambio de clientes)\n"
+    << "  - Swap Instalaciones (apertura/cierre de instalaciones)\n"
+    << "  - Eliminación de Incompatibilidades\n\n"
+    << "Estrategias de mejora:\n"
+    << "  - VND (Variable Neighborhood Descent, orden fijo)\n"
+    << "  - RVND (Random VND, orden aleatorio)\n"
+    << "  - VND-RL (VND con Reinforcement Learning, política ε-greedy)\n\n"
+    << "Uso:\n"
+    << "  ./ms_cflp_ci\n\n"
+    << "Opciones:\n"
+    << "  --help, -h       Muestra este mensaje y termina\n\n"
+    << "Instancias:\n"
+    << "  Formato .dzn en data/input/Public/\n"
+    << "  wlp01 a wlp20 (50-500 instalaciones, 115-1277 clientes)\n\n"
+    << "Salida:\n"
+    << "  - Tabla de resultados por consola\n"
+    << "  - Fichero de resultados (configurable)\n"
+    << "  - Fichero de evolución de Q (si se usa VND-RL)\n"
+    << "  - Fichero de configuración de ejecución\n\n"
+    << "Post-procesado:\n"
+    << "  QTablesPostProcessing.py — Script Python para la visualización\n"
+    << "  de la evolución de los valores Q del VND-RL.\n"
+    << "  Ejecute 'python QTablesPostProcessing.py --help' para ver\n"
+    << "  todas las opciones de generación de gráficas.\n\n";
 }
 
 /**
