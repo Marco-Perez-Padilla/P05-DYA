@@ -461,12 +461,10 @@ class QEvolutionPlotter:
         dataframe = data.get_data(self.max_iter)
         row_count = len(dataframe)
         
-        # Automatic adaptive binning for very large datasets
         if row_count > 5000 and self.bins == 0:
             adaptive_bins = max(300, row_count // 20)
             dataframe = data.get_binned(self.max_iter, adaptive_bins)
         elif self.bins > 0:
-            # User-specified binning takes precedence
             dataframe = data.get_binned(self.max_iter, self.bins)
         
         return dataframe
@@ -648,7 +646,6 @@ def main() -> None:
 
         data_by_config = QEvolutionLoader.from_directories(args.dirs, instance_filter)
 
-        # Collect all unique instance names
         all_instances = sorted({
             dataset.instance_name 
             for datasets in data_by_config.values() 

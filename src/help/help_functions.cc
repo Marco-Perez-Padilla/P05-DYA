@@ -74,9 +74,17 @@ void Usage() {
     << "  - Fichero de evolución de Q (si se usa VND-RL)\n"
     << "  - Fichero de configuración de ejecución\n\n"
     << "Post-procesado:\n"
-    << "  QTablesPostProcessing.py — Script Python para la visualización\n"
+    << "  - QTablesPostProcessing.py — Script Python para la visualización\n"
     << "  de la evolución de los valores Q del VND-RL.\n"
     << "  Ejecute 'python QTablesPostProcessing.py --help' para ver\n"
+    << "  todas las opciones de generación de gráficas.\n\n"
+    << "  - ComputeDeviations.py — Script Python para el cómputo de\n"
+    << "  las desviaciones en los resultados respecto al mejor valor conocido.\n"
+    << "  Ejecute 'python ComputeDeviations.py --help' para ver\n"
+    << "  todas las opciones de generación de desviaciones.\n\n"
+    << "  - PlotResultsComparison.py — Script Python para la visualización\n"
+    << "  de la comparación de resultados respecto al mejor valor conocido.\n"
+    << "  Ejecute 'python PlotResultsComparison.py --help' para ver\n"
     << "  todas las opciones de generación de gráficas.\n\n";
 }
 
