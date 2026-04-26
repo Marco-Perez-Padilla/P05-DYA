@@ -84,6 +84,10 @@ void ui_configureLocalSearch(RunConfig& config) {
     std::cout << "\n--- Parámetros VND-RL ---\n";
     config.gvns_alpha_rl  = ui_askDouble("  Tasa de aprendizaje (alpha) [0.1]: ", 0.1);
     config.gvns_epsilon   = ui_askDouble("  Epsilon (exploración) [0.2]: ", 0.2);
+    if (config.gvns_epsilon < 0.01) {
+        std::cout << "  Epsilon demasiado pequeño, usando 0.2 por defecto.\n";
+        config.gvns_epsilon = 0.2;
+    }
     std::cout << "  Tipo de recompensa:\n"
               << "    [1] Binaria (0/1)\n"
               << "    [2] Proporcional (mejora relativa)\n"

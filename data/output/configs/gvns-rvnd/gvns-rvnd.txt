@@ -12,4 +12,3 @@ Instancias:
 Fichero resultados: data/output/results/gvns-rvnd/gvns-rvnd.txt
 Directorio Q: data/output/q_evolution/gvns-rvnd
 ========================================
-

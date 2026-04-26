@@ -119,6 +119,7 @@ static std::shared_ptr<LocalSearch> createLocalSearchStrategy(const RunConfig& c
     return std::make_shared<VND_RL>(ops, config.gvns_alpha_rl, config.gvns_epsilon, instanceName, rew,
                                     config.rl_max_sin_mejora, config.rl_max_total_iter, config.rl_decay,
                                     config.output_q_dir);   
+                                    std::cout << config.gvns_epsilon << "\n";
   } else if (config.use_rvnd) {
     auto rvnd = std::make_shared<RVND>(ops);
     if (!config.rvnd_order.empty()) rvnd->setOrder(config.rvnd_order);
@@ -206,7 +207,7 @@ static void dumpConfigToFile(const RunConfig& config) {
   if (config.use_rl) {
     out << "VND-RL (alpha=" << config.gvns_alpha_rl
         << " epsilon=" << config.gvns_epsilon
-        << " reward=" << (config.rl_reward_type == 1 ? "Binaria" : "Proporcional")
+        << " reward=" << (config.rl_reward_type == 1 ? "Binaria" : (config.rl_reward_type == 2 ? "Proporcional" : "Normalizada"))
         << " decay=" << (config.rl_decay ? "Sí" : "No")
         << " maxSinMejora=" << config.rl_max_sin_mejora
         << " maxTotalIter=" << config.rl_max_total_iter << ")";
