@@ -1,0 +1,13 @@
+
+========================================
+Ejecución: Mon Apr 27 18:05:15 2026
+Algoritmos activos: GRASP 
+GRASP alpha=3 iter=200 LS mode=BOTH
+Estrategia local: VND
+Operadores seleccionados: 1 2 3 4
+Orden fijo: 1 2 3 4
+Instancias:
+Fichero resultados: data/output/results/grasp-vnd/grasp_vnd.txt
+Directorio Q: data/output/q_evolution/default/
+========================================
+

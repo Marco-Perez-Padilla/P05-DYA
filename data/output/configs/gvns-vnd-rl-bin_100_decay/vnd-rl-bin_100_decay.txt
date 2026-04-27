@@ -1,0 +1,15 @@
+
+========================================
+Ejecución: Mon Apr 27 18:11:54 2026
+Algoritmos activos: Voraz GRASP GVNS 
+GRASP alpha=3 iter=100 LS mode=BOTH
+Voraz LS mode=BOTH
+Estrategia local: VND-RL (alpha=0.3 epsilon=0.2 reward=Binaria decay=Sí maxSinMejora=5 maxTotalIter=10)
+Operadores seleccionados: 1 2 3 4
+Orden fijo: 1 2 3 4
+GVNS kmax=5 iter=100
+Instancias:
+Fichero resultados: data/output/results/gvns-vnd-rl-bin_100_decay/vnd-rl-bin_100_decay.txt
+Directorio Q: data/output/q_evolution/gvns-vnd-rl-bin_100_decay/
+========================================
+
