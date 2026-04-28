@@ -1,0 +1,13 @@
+
+========================================
+Ejecución: Tue Apr 28 12:23:57 2026
+Algoritmos activos: 
+Estrategia local: RVND
+Operadores seleccionados:
+Orden fijo:
+GVNS kmax=5 iter=10
+Instancias:
+Fichero resultados: 10iteraciones.txt
+Directorio Q: data/output/q_evolution/default/
+========================================
+
