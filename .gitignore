@@ -39,3 +39,5 @@ data/input/Public/wlp20.dzn
 cte-500
 cte_500.txt
 cfg_cte_500.txt
+data/output/q_evolution/gvns-vnd-rl-bin_500/q_evolution_wlp02.dzn.csv
+data/output/q_evolution/gvns-vnd-rl-bin_500/q_evolution_wlp03.dzn.csv
