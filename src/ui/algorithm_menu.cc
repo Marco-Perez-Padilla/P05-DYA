@@ -34,7 +34,8 @@ void ui_configureAlgorithms(RunConfig& config) {
   config.run_greedy = ui_askYesNo("¿Ejecutar Voraz?", true);
   config.run_GRASP  = ui_askYesNo("¿Ejecutar GRASP?", true);
   config.run_GVNS   = ui_askYesNo("¿Ejecutar GVNS?",   false);
-
+  config.run_modified_gvns = ui_askYesNo("¿Ejecutar GVNS modificado?", true);
+  if (config.run_modified_gvns) config.use_rvnd = true;
   if (config.run_GRASP) {
     std::cout << "\n--- Parámetros GRASP ---\n";
     config.grasp_alpha = ui_askInt("  Tamaño LRC (alpha) [3]: ", 3);

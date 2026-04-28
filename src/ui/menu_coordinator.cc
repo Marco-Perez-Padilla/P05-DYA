@@ -183,7 +183,8 @@ static void dumpConfigToFile(const RunConfig& config) {
   out << "Algoritmos activos: "
       << (config.run_greedy ? "Voraz " : "")
       << (config.run_GRASP  ? "GRASP " : "")
-      << (config.run_GVNS   ? "GVNS " : "") << "\n";
+      << (config.run_GVNS   ? "GVNS " : "") 
+      << (config.run_GVNS   ? "GVNS modificado " : "") << "\n";
 
   if (config.run_GRASP) {
     out << "GRASP alpha=" << config.grasp_alpha
@@ -223,7 +224,7 @@ static void dumpConfigToFile(const RunConfig& config) {
   for (int idx : config.rvnd_order) out << " " << (idx+1);
   out << "\n";
 
-  if (config.run_GVNS) {
+  if (config.run_GVNS || config.run_modified_gvns) {
     out << "GVNS kmax=" << config.gvns_kmax_value
         << (config.gvns_kmax_percent ? "%" : "")
         << " iter=" << config.gvns_iter
@@ -266,7 +267,7 @@ void ui_launchApplication() {
   if (needLSConfig) {
     ui_configureLocalSearch(config);
   }
-  if (config.run_GVNS) {
+  if (config.run_GVNS || config.run_modified_gvns) {
     ui_configureGVNS(config);
   }
   // Save the configuration to the log file before running any algorithms
@@ -357,7 +358,51 @@ void ui_launchApplication() {
           }
         }
 
-        // GVNS
+                // ========== GVNS MODIFICADO (defensa) ==========
+        if (config.run_modified_gvns) {
+          Timer t;
+          Solution best;
+          double bestCost = std::numeric_limits<double>::max();
+
+          // Construir solución inicial con GRASP
+          GRASPConstructive grasp(config.grasp_alpha);
+          // Mejorar SOLO con Swap‑Clientes
+          auto swapClients = std::make_shared<SwapClients>();
+
+          // Crear RVND solo con Shift y Swap‑Instalaciones
+          std::vector<std::shared_ptr<LocalSearch>> modOps;
+          modOps.push_back(std::make_shared<Shifts>());
+          modOps.push_back(std::make_shared<SwapFacilities>());
+          auto rvnd = std::make_shared<RVND>(modOps);
+          int actual_kmax = config.gvns_kmax_value;
+          if (config.gvns_kmax_percent) {
+            actual_kmax = std::max(1, (int)(config.gvns_kmax_value / 100.0 * inst.stores));
+          }
+
+          for (int it = 0; it < config.gvns_iter; ++it) {
+            grasp.reseed();
+            Solution sol = grasp.build(inst);
+            swapClients->improve(sol, inst);   // mejora inicial con Swap‑Clientes
+
+            // GVNS con el RVND modificado
+            GVNS gvns(std::make_shared<GreedyConstructive>(), rvnd, actual_kmax, 10);
+            gvns.setSeed(it + 12345);
+            sol = gvns.run(inst);
+
+            if (sol.getTotalCost() < bestCost) {
+              bestCost = sol.getTotalCost();
+              best = sol;
+            }
+          }
+
+          std::string label = instName + " [ModGVNS kmax=" + std::to_string(actual_kmax)
+                              + " i=" + std::to_string(config.gvns_iter) + "]";
+          printSolutionRow(label, best, inst, t.elapsedSeconds());
+          writeResultsToFile(config.output_results_file,
+              label + "," + std::to_string(best.openFacilitiesCount()) + ","
+              + std::to_string(best.getTotalCost()) + "," + std::to_string(t.elapsedSeconds()));
+        }
+
         if (config.run_GVNS) {
           Timer t;
           Solution best;

@@ -71,6 +71,9 @@ struct RunConfig {
     std::string output_results_file = "data/output/results/default/results.txt";
     std::string output_q_dir = "data/output/q_evolution/default/";
     std::string output_config_log  = "data/output/configs/default/config_log.txt";
+
+    // MOdificacion
+    bool run_modified_gvns = true;
 };
 
 #endif
